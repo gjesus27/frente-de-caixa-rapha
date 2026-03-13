@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+<meta charset="UTF-8">
+<title>PDV</title>
+
+<link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body>
+
+<!-- TOPO DO SISTEMA -->
+
+<div class="topBar">
+
+<div>
+<span id="usuarioLogado"></span>
+</div>
+
+<div>
+<button onclick="logout()">Sair</button>
+</div>
+
+</div>
+
+
+<div class="pdvContainer">
+
+<!-- PRODUTOS -->
+
+<div id="produtos" class="produtos"></div>
+
+
+<!-- CAIXA / CARRINHO -->
+
+<div class="caixa">
+
+<h2>Carrinho</h2>
+
+<div id="listaCarrinho" class="listaCarrinho"></div>
+
+<div class="totalArea">
+
+<h2>Total</h2>
+
+<div id="total" class="total">
+R$ 0,00
+</div>
+
+</div>
+
+<div class="pagamentos">
+
+<button onclick="finalizarVenda('dinheiro')">Dinheiro</button>
+
+<button onclick="finalizarVenda('debito')">Débito</button>
+
+<button onclick="finalizarVenda('credito')">Crédito</button>
+
+<button onclick="finalizarVenda('pix')">PIX</button>
+
+<button onclick="finalizarVenda('cashback')">Cashback</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script type="module" src="../js/pdv.js"></script>
+
+</body>
+
+</html>
