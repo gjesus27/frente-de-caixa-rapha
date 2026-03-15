@@ -1,7 +1,51 @@
-<h2>Abertura de Caixa</h2>
+<!DOCTYPE html>
+<html>
 
-<input id="valorAbertura" placeholder="Valor inicial">
+<head>
 
-<button onclick="abrirCaixa()">Abrir Caixa</button>
+<meta charset="UTF-8">
+<title>Controle de Caixa</title>
 
-<script type="module" src="../js/caixa.js"></script>
+<link rel="stylesheet" href="../css/pdv.css">
+
+</head>
+
+<body>
+
+<h1>Controle de Caixa</h1>
+
+<div id="caixaFechado">
+
+<h3>Abrir Caixa</h3>
+
+<input id="valorInicial" placeholder="Valor inicial">
+
+<button onclick="abrirCaixa()">Abrir</button>
+
+</div>
+
+<div id="caixaAberto" style="display:none;">
+
+<h2>Saldo atual</h2>
+
+<h1 id="saldo">R$ 0</h1>
+
+<h3>Registrar retirada</h3>
+
+<input id="valorRetirada" placeholder="Valor">
+
+<input id="motivoRetirada" placeholder="Motivo">
+
+<button onclick="retirada()">Registrar</button>
+
+<hr>
+
+<button onclick="fecharCaixa()">Fechar Caixa</button>
+
+</div>
+
+<script type="module" src="../js/caixaControle.js"></script>
+
+</body>
+
+</html>
