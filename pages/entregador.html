@@ -1,18 +1,75 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
+
 <meta charset="UTF-8">
-<title>Entregas</title>
-<link rel="stylesheet" href="../css/style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Entregas - Açaí do Rapha</title>
+
+<link rel="stylesheet" href="../css/entregador.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
 </head>
 
 <body>
 
-<h1>Painel do Entregador</h1>
+<header class="topBar">
+
+<div class="logoArea">
+
+<img src="../img/Logo.png">
+<span>Entregador Açaí do Rapha</span>
+
+</div>
+
+<div class="menuArea">
+
+<span id="usuarioLogado"></span>
+
+<div id="menuAdmin" class="menuAdmin hidden">
+
+<button onclick="irDashboard()">Dashboard</button>
+<button onclick="irPDV()">PDV</button>
+<button onclick="irProdutos()">Produtos</button>
+
+</div>
+
+<button onclick="logout()">Sair</button>
+
+</div>
+
+</header>
+
+<div class="container">
+
+<div id="mapa"></div>
+
+<div class="entregasContainer">
+
+<h2>Pedidos para entrega</h2>
+
+<div class="filtrosEntrega">
+
+<button onclick="filtroProntas()">
+Prontas para entrega
+</button>
+
+<button onclick="filtroConcluidas()">
+Concluídas
+</button>
+
+</div>
 
 <div id="listaEntregas"></div>
 
-<script type="module" src="../js/entregas.js"></script>
+</div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script type="module" src="../js/entregador.js"></script>
 
 </body>
 </html>
