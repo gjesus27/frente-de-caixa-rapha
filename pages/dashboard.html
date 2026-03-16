@@ -1,34 +1,392 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
+
 <meta charset="UTF-8">
 <title>Dashboard</title>
-<link rel="stylesheet" href="../css/style.css">
+
+<link rel="stylesheet" href="../css/dashboard.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 </head>
 
 <body>
 
-<h1>Painel do Sistema</h1>
+<header>
 
-<a href="pdv.html">
-<button>Abrir PDV</button>
-</a>
+<h1>Painel Administrativo</h1>
 
-<br><br>
+<nav>
 
-<a href="produtos.html">
-<button>Gerenciar Produtos</button>
-</a>
+<a href="pdv.html"><button>PDV</button></a>
+<a href="produtos.html"><button>Produtos</button></a>
+<a href="entregador.html"><button>Entregas</button></a>
 
-<br><br>
-
-<a href="entregador.html">
-<button>Entregas</button>
-</a>
-
-<br><br>
+<button onclick="baixarExcel()">
+<i class="fa-solid fa-file-excel"></i>
+Relatório Excel
+</button>
 
 <button id="logout">Sair</button>
+
+</nav>
+
+</header>
+
+
+<section class="filtros">
+
+<input type="date" id="inicio">
+<input type="date" id="fim">
+
+<button onclick="filtrar()">Filtrar</button>
+
+</section>
+
+
+
+<section class="cards">
+
+<div class="card">
+<h3>Total Vendido</h3>
+<p id="totalVendido">R$0</p>
+</div>
+
+<div class="card">
+<h3>Pedidos</h3>
+<p id="totalPedidos">0</p>
+</div>
+
+<div class="card">
+<h3>Ticket Médio</h3>
+<p id="ticketMedio">R$0</p>
+</div>
+
+<div class="card">
+<h3>Previsão do Mês</h3>
+<p id="previsaoMes">R$0</p>
+</div>
+
+<div class="card">
+<h3>Vendas iFood</h3>
+
+<input id="inputIfood" type="number" placeholder="Digite valor">
+
+<button onclick="salvarIfood()">Salvar</button>
+
+<p id="lucroIfood">R$0</p>
+
+</div>
+
+<div class="card">
+
+<h3>Vendas Keeta</h3>
+
+<input id="inputKeeta" type="number" placeholder="Digite valor">
+
+<button onclick="salvarKeeta()">Salvar</button>
+
+<p id="lucroKeeta">R$0</p>
+
+</div>
+
+</section>
+
+
+
+<section class="graficos">
+
+<div class="grafico">
+<h3>Vendas por Dia</h3>
+<canvas id="graficoVendas"></canvas>
+</div>
+
+<div class="grafico">
+<h3>Produtos Mais Vendidos</h3>
+<canvas id="graficoProdutos"></canvas>
+</div>
+
+<div class="grafico">
+<h3>PDV vs Delivery</h3>
+<canvas id="graficoPlataforma"></canvas>
+</div>
+
+</section>
+
+
+
+<script type="module">
+
+import { db } from "../js/firebaseConfig.js";
+
+import {
+collection,
+getDocs,
+addDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+let grafico1
+let grafico2
+let grafico3
+
+let lucroIfood = 0
+let lucroKeeta = 0
+
+
+
+async function carregar(){
+
+let total = 0
+let pedidos = 0
+
+let vendasDia = {}
+let produtos = {}
+
+let pdv = 0
+let delivery = 0
+
+lucroIfood = 0
+lucroKeeta = 0
+
+
+const inicio = document.getElementById("inicio").value
+const fim = document.getElementById("fim").value
+
+
+const snapshot = await getDocs(collection(db,"pedidos"))
+
+snapshot.forEach(doc=>{
+
+const p = doc.data()
+
+if(!p.data) return
+
+const dataPedido = new Date(p.data)
+
+if(inicio && dataPedido < new Date(inicio)) return
+if(fim && dataPedido > new Date(fim)) return
+
+total += Number(p.total)
+pedidos++
+
+if(p.tipo=="pdv") pdv += Number(p.total)
+else delivery += Number(p.total)
+
+const dia = dataPedido.toLocaleDateString()
+
+vendasDia[dia] = (vendasDia[dia] || 0) + Number(p.total)
+
+if(p.itens){
+
+p.itens.forEach(i=>{
+
+produtos[i.nome] = (produtos[i.nome] || 0) + Number(i.qtd)
+
+})
+
+}
+
+})
+
+
+
+const plataformas = await getDocs(collection(db,"plataformas"))
+
+plataformas.forEach(doc=>{
+
+const p = doc.data()
+
+if(p.tipo=="ifood") lucroIfood += Number(p.valor)
+if(p.tipo=="keeta") lucroKeeta += Number(p.valor)
+
+})
+
+
+
+document.getElementById("totalVendido").innerText = "R$ "+total.toFixed(2)
+document.getElementById("totalPedidos").innerText = pedidos
+
+document.getElementById("lucroIfood").innerText = "R$ "+lucroIfood.toFixed(2)
+document.getElementById("lucroKeeta").innerText = "R$ "+lucroKeeta.toFixed(2)
+
+
+
+let ticket = pedidos ? total/pedidos : 0
+
+document.getElementById("ticketMedio").innerText =
+"R$ "+ticket.toFixed(2)
+
+
+
+const hoje = new Date()
+const diaAtual = hoje.getDate()
+
+let previsao = (total/diaAtual)*30
+
+document.getElementById("previsaoMes").innerText =
+"R$ "+previsao.toFixed(2)
+
+
+
+criarGraficos(vendasDia,produtos,pdv,delivery)
+
+}
+
+
+
+carregar()
+
+
+
+function criarGraficos(vendasDia,produtos,pdv,delivery){
+
+if(grafico1) grafico1.destroy()
+if(grafico2) grafico2.destroy()
+if(grafico3) grafico3.destroy()
+
+
+grafico1 = new Chart(
+document.getElementById("graficoVendas"),
+{
+type:"line",
+
+data:{
+labels:Object.keys(vendasDia),
+datasets:[{
+label:"Vendas",
+data:Object.values(vendasDia),
+borderWidth:3,
+tension:0.4
+}]
+}
+
+}
+)
+
+
+
+grafico2 = new Chart(
+document.getElementById("graficoProdutos"),
+{
+type:"bar",
+
+data:{
+labels:Object.keys(produtos),
+datasets:[{
+label:"Quantidade",
+data:Object.values(produtos)
+}]
+}
+
+}
+)
+
+
+
+grafico3 = new Chart(
+document.getElementById("graficoPlataforma"),
+{
+type:"doughnut",
+
+data:{
+labels:["PDV","Delivery"],
+datasets:[{
+data:[pdv,delivery]
+}]
+}
+
+}
+)
+
+}
+
+
+
+window.filtrar = function(){
+
+carregar()
+
+}
+
+
+
+window.salvarIfood = async function(){
+
+const valor = Number(document.getElementById("inputIfood").value)
+
+if(!valor) return alert("Digite um valor")
+
+await addDoc(collection(db,"plataformas"),{
+
+tipo:"ifood",
+valor:valor,
+data:new Date()
+
+})
+
+alert("Venda iFood salva")
+
+carregar()
+
+}
+
+
+
+window.salvarKeeta = async function(){
+
+const valor = Number(document.getElementById("inputKeeta").value)
+
+if(!valor) return alert("Digite um valor")
+
+await addDoc(collection(db,"plataformas"),{
+
+tipo:"keeta",
+valor:valor,
+data:new Date()
+
+})
+
+alert("Venda Keeta salva")
+
+carregar()
+
+}
+
+
+
+window.baixarExcel = function(){
+
+const dados = [
+
+{
+total:document.getElementById("totalVendido").innerText,
+pedidos:document.getElementById("totalPedidos").innerText,
+ticket:document.getElementById("ticketMedio").innerText,
+previsao:document.getElementById("previsaoMes").innerText,
+ifood:document.getElementById("lucroIfood").innerText,
+keeta:document.getElementById("lucroKeeta").innerText
+}
+
+]
+
+const planilha = XLSX.utils.json_to_sheet(dados)
+
+const arquivo = XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(arquivo,planilha,"Dashboard")
+
+XLSX.writeFile(arquivo,"relatorio_dashboard.xlsx")
+
+}
+
+</script>
 
 <script type="module" src="../js/auth.js"></script>
 

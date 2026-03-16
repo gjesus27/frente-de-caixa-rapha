@@ -7,7 +7,36 @@ getDocs
 
 let aberto = null;
 
+/* VERIFICA SE EXISTE LISTA DE USUÁRIOS NA PÁGINA */
+
 const listaUsuarios = document.getElementById("listaUsuarios");
+
+if(!listaUsuarios){
+
+/* logout ainda funciona nas outras páginas */
+
+const logoutBtn = document.getElementById("logout");
+
+if(logoutBtn){
+
+logoutBtn.onclick = ()=>{
+
+localStorage.removeItem("usuarioLogado");
+window.location.href="../index.html";
+
+};
+
+}
+
+}else{
+
+carregarUsuarios();
+
+}
+
+
+
+/* CARREGAR USUÁRIOS */
 
 async function carregarUsuarios(){
 
@@ -50,6 +79,7 @@ const input = card.querySelector("input");
 const entrar = card.querySelector(".entrar");
 const cancelar = card.querySelector(".cancelar");
 
+
 /* ABRIR SENHA */
 
 card.onclick = ()=>{
@@ -66,6 +96,7 @@ aberto = area;
 
 };
 
+
 /* CANCELAR */
 
 cancelar.onclick = (e)=>{
@@ -75,6 +106,7 @@ e.stopPropagation();
 area.style.display="none";
 
 };
+
 
 /* LOGIN */
 
@@ -111,10 +143,9 @@ window.location.href="../pages/entregador.html";
 
 };
 
+
 listaUsuarios.appendChild(card);
 
 });
 
 }
-
-carregarUsuarios();
