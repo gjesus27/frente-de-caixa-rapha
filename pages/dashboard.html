@@ -121,6 +121,8 @@ Relatório Excel
 
 
 
+<!-- TROQUE APENAS O SCRIPT PELO DE BAIXO -->
+
 <script type="module">
 
 import { db } from "../js/firebaseConfig.js";
@@ -131,15 +133,12 @@ getDocs,
 addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-
 let grafico1
 let grafico2
 let grafico3
 
 let lucroIfood = 0
 let lucroKeeta = 0
-
-
 
 async function carregar(){
 
@@ -155,39 +154,48 @@ let delivery = 0
 lucroIfood = 0
 lucroKeeta = 0
 
-
 const inicio = document.getElementById("inicio").value
 const fim = document.getElementById("fim").value
 
 
-const snapshot = await getDocs(collection(db,"pedidos"))
+/* 🔥 AGORA BUSCA EM VENDAS */
+const snapshot = await getDocs(collection(db,"vendas"))
 
 snapshot.forEach(doc=>{
 
 const p = doc.data()
 
-if(!p.data) return
+if(!p) return
 
-const dataPedido = new Date(p.data)
+/* 🔥 CORREÇÃO DO TIMESTAMP */
+const dataPedido = p.data?.toDate 
+? p.data.toDate() 
+: new Date(p.data)
+
+/* FILTRO */
 
 if(inicio && dataPedido < new Date(inicio)) return
 if(fim && dataPedido > new Date(fim)) return
 
-total += Number(p.total)
+const valor = Number(p.total || 0)
+
+total += valor
 pedidos++
 
-if(p.tipo=="pdv") pdv += Number(p.total)
-else delivery += Number(p.total)
+if(p.tipo === "pdv") pdv += valor
+else delivery += valor
+
 
 const dia = dataPedido.toLocaleDateString()
 
-vendasDia[dia] = (vendasDia[dia] || 0) + Number(p.total)
+vendasDia[dia] = (vendasDia[dia] || 0) + valor
+
 
 if(p.itens){
 
 p.itens.forEach(i=>{
 
-produtos[i.nome] = (produtos[i.nome] || 0) + Number(i.qtd)
+produtos[i.nome] = (produtos[i.nome] || 0) + Number(i.qtd || 0)
 
 })
 
@@ -196,6 +204,7 @@ produtos[i.nome] = (produtos[i.nome] || 0) + Number(i.qtd)
 })
 
 
+/* IFOOD / KEETA */
 
 const plataformas = await getDocs(collection(db,"plataformas"))
 
@@ -203,12 +212,13 @@ plataformas.forEach(doc=>{
 
 const p = doc.data()
 
-if(p.tipo=="ifood") lucroIfood += Number(p.valor)
-if(p.tipo=="keeta") lucroKeeta += Number(p.valor)
+if(p.tipo === "ifood") lucroIfood += Number(p.valor || 0)
+if(p.tipo === "keeta") lucroKeeta += Number(p.valor || 0)
 
 })
 
 
+/* UI */
 
 document.getElementById("totalVendido").innerText = "R$ "+total.toFixed(2)
 document.getElementById("totalPedidos").innerText = pedidos
@@ -217,6 +227,7 @@ document.getElementById("lucroIfood").innerText = "R$ "+lucroIfood.toFixed(2)
 document.getElementById("lucroKeeta").innerText = "R$ "+lucroKeeta.toFixed(2)
 
 
+/* TICKET MÉDIO */
 
 let ticket = pedidos ? total/pedidos : 0
 
@@ -224,26 +235,25 @@ document.getElementById("ticketMedio").innerText =
 "R$ "+ticket.toFixed(2)
 
 
+/* PREVISÃO */
 
 const hoje = new Date()
 const diaAtual = hoje.getDate()
 
-let previsao = (total/diaAtual)*30
+let previsao = pedidos ? (total/diaAtual)*30 : 0
 
 document.getElementById("previsaoMes").innerText =
 "R$ "+previsao.toFixed(2)
-
 
 
 criarGraficos(vendasDia,produtos,pdv,delivery)
 
 }
 
-
-
 carregar()
 
 
+/* GRAFICOS */
 
 function criarGraficos(vendasDia,produtos,pdv,delivery){
 
@@ -252,11 +262,8 @@ if(grafico2) grafico2.destroy()
 if(grafico3) grafico3.destroy()
 
 
-grafico1 = new Chart(
-document.getElementById("graficoVendas"),
-{
+grafico1 = new Chart(document.getElementById("graficoVendas"),{
 type:"line",
-
 data:{
 labels:Object.keys(vendasDia),
 datasets:[{
@@ -266,17 +273,11 @@ borderWidth:3,
 tension:0.4
 }]
 }
-
-}
-)
+})
 
 
-
-grafico2 = new Chart(
-document.getElementById("graficoProdutos"),
-{
+grafico2 = new Chart(document.getElementById("graficoProdutos"),{
 type:"bar",
-
 data:{
 labels:Object.keys(produtos),
 datasets:[{
@@ -284,38 +285,30 @@ label:"Quantidade",
 data:Object.values(produtos)
 }]
 }
-
-}
-)
+})
 
 
-
-grafico3 = new Chart(
-document.getElementById("graficoPlataforma"),
-{
+grafico3 = new Chart(document.getElementById("graficoPlataforma"),{
 type:"doughnut",
-
 data:{
 labels:["PDV","Delivery"],
 datasets:[{
 data:[pdv,delivery]
 }]
 }
+})
 
 }
-)
-
-}
 
 
+/* FILTRO */
 
 window.filtrar = function(){
-
 carregar()
-
 }
 
 
+/* SALVAR IFOOD */
 
 window.salvarIfood = async function(){
 
@@ -324,20 +317,18 @@ const valor = Number(document.getElementById("inputIfood").value)
 if(!valor) return alert("Digite um valor")
 
 await addDoc(collection(db,"plataformas"),{
-
 tipo:"ifood",
 valor:valor,
 data:new Date()
-
 })
 
-alert("Venda iFood salva")
-
+alert("Salvo")
 carregar()
 
 }
 
 
+/* SALVAR KEETA */
 
 window.salvarKeeta = async function(){
 
@@ -346,35 +337,29 @@ const valor = Number(document.getElementById("inputKeeta").value)
 if(!valor) return alert("Digite um valor")
 
 await addDoc(collection(db,"plataformas"),{
-
 tipo:"keeta",
 valor:valor,
 data:new Date()
-
 })
 
-alert("Venda Keeta salva")
-
+alert("Salvo")
 carregar()
 
 }
 
 
+/* EXCEL */
 
 window.baixarExcel = function(){
 
-const dados = [
-
-{
+const dados = [{
 total:document.getElementById("totalVendido").innerText,
 pedidos:document.getElementById("totalPedidos").innerText,
 ticket:document.getElementById("ticketMedio").innerText,
 previsao:document.getElementById("previsaoMes").innerText,
 ifood:document.getElementById("lucroIfood").innerText,
 keeta:document.getElementById("lucroKeeta").innerText
-}
-
-]
+}]
 
 const planilha = XLSX.utils.json_to_sheet(dados)
 
