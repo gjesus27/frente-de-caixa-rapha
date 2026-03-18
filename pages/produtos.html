@@ -3,25 +3,64 @@
 <head>
 <meta charset="UTF-8">
 <title>Produtos</title>
-<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/produtos.css">
 </head>
 
 <body>
 
-<h1>Cadastro de Produtos</h1>
+<!-- HEADER -->
+<div class="topBar">
 
-<input id="nomeProduto" placeholder="Nome do Produto">
-<br><br>
+<div class="logoArea">
+<img src="../img/logo.png">
+<span>Açaí do Rapha</span>
+</div>
 
-<input id="precoProduto" placeholder="Preço">
-<br><br>
+<div class="menuArea">
+<a href="dashboard.html"><button>Dashboard</button></a>
+<a href="pdv.html"><button>PDV</button></a>
+<a href="produtos.html"><button>Produtos</button></a>
+<a href="entregas.html"><button>Entregas</button></a>
 
-<button id="salvarProduto">Salvar Produto</button>
+<span class="userName" id="userName">Carregando...</span>
+</div>
 
-<hr>
+</div>
 
-<h2>Lista de Produtos</h2>
+<!-- CONTEÚDO -->
+<div class="container">
+
+<h1>Produtos</h1>
+
+<button id="abrirModal">+ Novo Produto</button>
+
 <div id="listaProdutos"></div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal">
+<div>
+
+<h3>Novo Produto</h3>
+
+<input id="nomeProduto" placeholder="Nome">
+<input id="categoriaProduto" placeholder="Categoria">
+<input id="precoProduto" placeholder="Preço">
+<input id="estoqueProduto" placeholder="Estoque">
+
+<select id="codigoBarras">
+<option value="nao">Sem código de barras</option>
+<option value="sim">Com código de barras</option>
+</select>
+
+<input type="file" id="fotoProduto">
+
+<button id="salvarProduto">Salvar</button>
+<button id="fecharModal">Cancelar</button>
+
+</div>
+</div>
 
 <script type="module" src="../js/produtos.js"></script>
 
