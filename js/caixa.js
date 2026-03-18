@@ -302,9 +302,14 @@ listaProdutos=[];
 snapshot.forEach(docSnap=>{
 
 const p = docSnap.data();
-if(!p.ativo) return;
 
+// 🔥 não vamos mais travar por "ativo"
 p.id = docSnap.id;
+
+// garante padrão
+p.nome = p.nome || "Produto sem nome";
+p.preco = Number(p.preco || 0);
+p.imagem = p.imagem || "https://via.placeholder.com/100";
 
 listaProdutos.push(p);
 
@@ -327,9 +332,9 @@ const div = document.createElement("div");
 div.classList.add("produto");
 
 div.innerHTML=`
-<img src="${p.foto}">
+<img src="${p.imagem}">
 <h4>${p.nome}</h4>
-<p>R$ ${Number(p.preco).toFixed(2)}</p>
+<p>R$ ${p.preco.toFixed(2)}</p>
 `;
 
 div.onclick=()=>{
@@ -342,6 +347,10 @@ produtosDiv.appendChild(div);
 });
 
 }
+
+/* ========================== */
+/* FILTRO */
+/* ========================== */
 
 window.filtrarProdutos=()=>{
 
