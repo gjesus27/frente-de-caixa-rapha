@@ -376,3 +376,8 @@ font-size:14px;
 }
 
 }
+
+.logoArea img{
+  height:40px;
+  object-fit:contain;
+}

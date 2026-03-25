@@ -294,3 +294,8 @@ border-radius:6px;
 cursor:pointer;
 
 }
+
+.logoArea img{
+  height:40px;
+  object-fit:contain;
+}

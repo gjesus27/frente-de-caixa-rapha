@@ -122,3 +122,7 @@ opacity:1;
 
 }
 
+.logoArea img{
+  height:40px;
+  object-fit:contain;
+}

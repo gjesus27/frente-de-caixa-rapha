@@ -202,3 +202,8 @@ color:white;
 background:#eee;
 
 }
+
+.logoArea img{
+  height:40px;
+  object-fit:contain;
+}

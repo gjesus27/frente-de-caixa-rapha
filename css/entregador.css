@@ -356,3 +356,8 @@ font-size:16px;
 input, button, select{
 min-height:44px;
 }
+
+.logoArea img{
+  height:40px;
+  object-fit:contain;
+}
