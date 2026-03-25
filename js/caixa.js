@@ -68,8 +68,13 @@ ${conteudo}
 </div>
 
 <div class="modalBotoes">
-<button id="btnConfirmar">Confirmar</button>
-<button id="btnCancelar">Cancelar</button>
+<button id="btnConfirmar">
+<i class="fa-solid fa-check"></i> Confirmar
+</button>
+
+<button id="btnCancelar">
+<i class="fa-solid fa-xmark"></i> Cancelar
+</button>
 </div>
 
 </div>
@@ -77,8 +82,8 @@ ${conteudo}
 
 document.body.appendChild(modal);
 
-document.getElementById("btnConfirmar").onclick = ()=>{
-acaoConfirmar();
+document.getElementById("btnConfirmar").onclick = async ()=>{
+if(acaoConfirmar) await acaoConfirmar();
 modal.remove();
 };
 
@@ -181,20 +186,38 @@ where("idCaixa","==",caixaId)
 
 const snapshot = await getDocs(q);
 
-let dinheiro=0,pix=0,debito=0,credito=0,cashback=0;
+let dinheiro=0,pix=0,debito=0,credito=0,ticket=0;
 
+/* 🔥 AQUI ESTÁ O QUE FALTAVA */
 snapshot.forEach(docSnap=>{
 
 const venda = docSnap.data();
+
+if(venda.pagamentos){
+
+venda.pagamentos.forEach(p=>{
+
+switch(p.tipo){
+case "dinheiro": dinheiro+=p.valor; break;
+case "pix": pix+=p.valor; break;
+case "debito": debito+=p.valor; break;
+case "credito": credito+=p.valor; break;
+case "ticket": ticket+=p.valor; break;
+}
+
+});
+
+}else{
+
+// fallback antigo
 const valor = Number(venda.total||0);
 
 switch(venda.formaPagamento){
-
 case "dinheiro": dinheiro+=valor; break;
 case "pix": pix+=valor; break;
 case "debito": debito+=valor; break;
 case "credito": credito+=valor; break;
-case "cashback": cashback+=valor; break;
+}
 
 }
 
@@ -210,17 +233,16 @@ abrirModal(
 "Fechamento de Caixa",
 
 `
-<p>💵 Dinheiro: R$ ${dinheiro.toFixed(2)}</p>
-<p>📱 Pix: R$ ${pix.toFixed(2)}</p>
-<p>💳 Débito: R$ ${debito.toFixed(2)}</p>
-<p>💳 Crédito: R$ ${credito.toFixed(2)}</p>
-<p>🎁 Cashback: R$ ${cashback.toFixed(2)}</p>
+<p><i class="fa-solid fa-money-bill"></i> Dinheiro: R$ ${dinheiro.toFixed(2)}</p>
+<p><i class="fa-brands fa-pix"></i> Pix: R$ ${pix.toFixed(2)}</p>
+<p><i class="fa-solid fa-credit-card"></i> Débito: R$ ${debito.toFixed(2)}</p>
+<p><i class="fa-solid fa-credit-card"></i> Crédito: R$ ${credito.toFixed(2)}</p>
+<p><i class="fa-solid fa-ticket"></i> Ticket: R$ ${ticket.toFixed(2)}</p>
 
 <hr>
 
-<p>Total vendido: R$ ${(dinheiro+pix+debito+credito+cashback).toFixed(2)}</p>
-
-<p>Dinheiro esperado no caixa: R$ ${saldoAtual.toFixed(2)}</p>
+<p><b>Total vendido:</b> R$ ${(dinheiro+pix+debito+credito+ticket).toFixed(2)}</p>
+<p><b>Saldo esperado:</b> R$ ${saldoAtual.toFixed(2)}</p>
 `,
 
 async ()=>{
@@ -457,7 +479,27 @@ saldoAtual:caixaSnap.data().saldoAtual+total
 carrinho=[];
 renderCarrinho();
 
-alert("Venda finalizada");
+abrirModal(
+"Venda Finalizada",
+`
+<div style="text-align:center">
+
+<h2 style="color:#00c853;">✅ Venda concluída</h2>
+
+<p><b>Total:</b> R$ ${total.toFixed(2)}</p>
+
+${pagamentos.map(p=>`
+<p>
+${p.tipo.toUpperCase()}: R$ ${p.valor.toFixed(2)}
+</p>
+`).join("")}
+
+${troco > 0 ? `<p><b>Troco:</b> R$ ${troco.toFixed(2)}</p>` : ""}
+
+</div>
+`,
+()=>{}
+);
 
 };
 
@@ -717,3 +759,241 @@ window.logout=()=>{
 localStorage.removeItem("usuarioLogado");
 window.location.href="login.html";
 };
+
+/* ========================== */
+/* NOVO SISTEMA DE PAGAMENTO */
+/* ========================== */
+
+let pagamentosTemp = [];
+
+/* PAGAMENTO SIMPLES COM TROCO */
+window.pagarSimples = (tipo)=>{
+
+if(total <= 0){
+alert("Carrinho vazio");
+return;
+}
+
+if(tipo === "dinheiro"){
+
+abrirModal(
+"Pagamento em Dinheiro",
+
+`
+<p>Total: R$ ${total.toFixed(2)}</p>
+<input id="valorPago" type="number" placeholder="Valor recebido">
+<p id="trocoTexto"></p>
+`,
+
+async ()=>{
+
+const pago = Number(document.getElementById("valorPago").value);
+
+if(!pago){
+alert("Informe o valor");
+return;
+}
+
+const troco = pago - total;
+
+await finalizarVendaCompleta([
+{tipo:"dinheiro", valor: total}
+], troco);
+
+}
+
+);
+
+setTimeout(()=>{
+
+document.getElementById("valorPago").oninput = ()=>{
+const pago = Number(document.getElementById("valorPago").value);
+const troco = pago - total;
+
+document.getElementById("trocoTexto").innerText =
+troco >= 0 ? "Troco: R$ "+troco.toFixed(2) : "Faltam: R$ "+Math.abs(troco).toFixed(2);
+};
+
+},100);
+
+}else{
+
+finalizarVendaCompleta([
+{tipo, valor: total}
+],0);
+
+}
+
+};
+
+/* PAGAMENTO MISTO */
+window.abrirPagamentoMisto = ()=>{
+
+pagamentosTemp = [];
+
+abrirModal(
+"Pagamento Misto",
+
+`
+<select id="tipoPagamento">
+<option value="dinheiro">Dinheiro</option>
+<option value="pix">PIX</option>
+<option value="debito">Débito</option>
+<option value="credito">Crédito</option>
+<option value="ticket">Ticket</option>
+</select>
+
+<input id="valorPagamento" type="number" placeholder="Valor">
+
+<button onclick="adicionarPagamento()">Adicionar</button>
+
+<div id="listaPagamentos"></div>
+
+<p>Total: R$ ${total.toFixed(2)}</p>
+<p id="totalPago">Pago: R$ 0.00</p>
+<p id="restante"></p>
+`,
+
+()=>confirmarPagamentoMisto()
+
+);
+
+};
+
+/* ADICIONAR PAGAMENTO */
+window.adicionarPagamento = ()=>{
+
+const tipo = document.getElementById("tipoPagamento").value;
+const valor = Number(document.getElementById("valorPagamento").value);
+
+if(!valor) return;
+
+pagamentosTemp.push({tipo,valor});
+
+atualizarPagamentos();
+
+};
+
+/* ATUALIZA TELA */
+function atualizarPagamentos(){
+
+const lista = document.getElementById("listaPagamentos");
+
+if(!lista) return;
+
+lista.innerHTML = "";
+
+let totalPago = 0;
+
+pagamentosTemp.forEach(p=>{
+
+totalPago += p.valor;
+
+lista.innerHTML += `<p>${p.tipo}: R$ ${p.valor.toFixed(2)}</p>`;
+
+});
+
+document.getElementById("totalPago").innerText =
+"Pago: R$ "+totalPago.toFixed(2);
+
+const resto = total - totalPago;
+
+document.getElementById("restante").innerText =
+resto > 0 ? "Falta: R$ "+resto.toFixed(2) :
+"Troco: R$ "+Math.abs(resto).toFixed(2);
+
+}
+
+/* CONFIRMAR MISTO */
+async function confirmarPagamentoMisto(){
+
+let totalPago = pagamentosTemp.reduce((s,p)=>s+p.valor,0);
+
+if(totalPago < total){
+alert("Pagamento incompleto");
+return;
+}
+
+const troco = totalPago - total;
+
+await finalizarVendaCompleta(pagamentosTemp,troco);
+
+}
+
+/* FINALIZAÇÃO REAL */
+async function finalizarVendaCompleta(pagamentos,troco){
+
+if(!caixaAberto){
+alert("Abra o caixa");
+return;
+}
+
+if(carrinho.length===0){
+alert("Carrinho vazio");
+return;
+}
+
+let itens = carrinho.map(p=>({
+idProduto:p.id,
+nome:p.nome,
+preco:Number(p.preco),
+quantidade:1
+}));
+
+await addDoc(collection(db,"vendas"),{
+
+criadoEm:new Date(),
+pagamentos,
+
+troco,
+
+idCaixa:caixaId,
+
+idUsuario:usuario.nome,
+nomeUsuario:usuario.nome,
+
+itens,
+
+subtotal:total,
+total,
+
+tipo:"balcao",
+status:"finalizado"
+
+});
+
+const caixaRef=doc(db,"caixa",caixaId);
+const caixaSnap=await getDoc(caixaRef);
+
+await updateDoc(caixaRef,{
+saldoAtual:caixaSnap.data().saldoAtual+total
+});
+
+carrinho=[];
+renderCarrinho();
+
+alert("Venda finalizada");
+
+}
+
+window.toggleMenu = ()=>{
+
+const menu = document.getElementById("menuMobile");
+
+menu.classList.toggle("ativo");
+
+};
+
+function mostrarLoading(){
+const div = document.createElement("div");
+div.className = "loading";
+div.id = "loading";
+
+div.innerHTML = `<div class="spinner"></div>`;
+
+document.body.appendChild(div);
+}
+
+function esconderLoading(){
+document.getElementById("loading")?.remove();
+}

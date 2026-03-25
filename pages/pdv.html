@@ -9,48 +9,102 @@
 <title>PDV - Açaí do Rapha</title>
 
 <link rel="stylesheet" href="../css/pdv.css">
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
 
 <header class="topBar">
 
-<div class="logoArea">
+  <!-- ESQUERDA -->
+  <div class="logoArea">
+    <img src="../img/Logo.png">
+    <span class="tituloPDV">PDV Açaí do Rapha</span>
+  </div>
 
-<img src="../img/Logo.png">
+  <!-- CENTRO (CAIXA) -->
+  <div class="acoesCaixa desktopOnly">
+    <button onclick="abrirCaixaManual()">
+      <i class="fa-solid fa-cash-register"></i> Abrir Caixa
+    </button>
 
-<span class="tituloPDV">PDV Açaí do Rapha</span>
+    <button onclick="fecharCaixaManual()">
+      <i class="fa-solid fa-chart-line"></i> Fechar Caixa
+    </button>
 
-<div class="acoesCaixa">
+    <button onclick="retirada()">
+      <i class="fa-solid fa-arrow-up"></i> Retirada
+    </button>
+  </div>
 
-<button onclick="abrirCaixaManual()">Abrir Caixa</button>
+  <!-- DIREITA -->
+  <div class="menuArea desktopOnly">
 
-<button onclick="fecharCaixaManual()">Fechar Caixa</button>
+    <span id="usuarioLogado"></span>
 
-<button onclick="retirada()">Retirada</button>
+    <div id="menuAdmin" class="menuAdmin hidden">
+      <button onclick="irProdutos()">
+        <i class="fa-solid fa-box"></i> Produtos
+      </button>
 
-</div>
+      <button onclick="irEntregas()">
+        <i class="fa-solid fa-motorcycle"></i> Entregas
+      </button>
 
-</div>
+      <button onclick="irDashboard()">
+        <i class="fa-solid fa-chart-pie"></i> Dashboard
+      </button>
+    </div>
 
-<div class="menuArea">
+    <button onclick="logout()">
+      <i class="fa-solid fa-right-from-bracket"></i> Sair
+    </button>
 
-<span id="usuarioLogado"></span>
+  </div>
 
-<div id="menuAdmin" class="menuAdmin hidden">
-
-<button onclick="irProdutos()">Produtos</button>
-<button onclick="irEntregas()">Entregas</button>
-<button onclick="irDashboard()">Dashboard</button>
-
-</div>
-
-<button onclick="logout()">Sair</button>
-
-</div>
+  <!-- HAMBURGUER (SÓ MOBILE) -->
+  <button class="menuToggle" onclick="toggleMenu()">
+    <i class="fa-solid fa-bars"></i>
+  </button>
 
 </header>
+
+<!-- MENU MOBILE -->
+<div id="menuMobile" class="menuMobile">
+
+  <span id="usuarioLogado"></span>
+
+  <button onclick="abrirCaixaManual()">
+    <i class="fa-solid fa-cash-register"></i> Abrir Caixa
+  </button>
+
+  <button onclick="fecharCaixaManual()">
+    <i class="fa-solid fa-chart-line"></i> Fechar Caixa
+  </button>
+
+  <button onclick="retirada()">
+    <i class="fa-solid fa-arrow-up"></i> Retirada
+  </button>
+
+  <div id="menuAdmin" class="menuAdmin hidden">
+    <button onclick="irProdutos()">
+      <i class="fa-solid fa-box"></i> Produtos
+    </button>
+
+    <button onclick="irEntregas()">
+      <i class="fa-solid fa-motorcycle"></i> Entregas
+    </button>
+
+    <button onclick="irDashboard()">
+      <i class="fa-solid fa-chart-pie"></i> Dashboard
+    </button>
+  </div>
+
+  <button onclick="logout()">
+    <i class="fa-solid fa-right-from-bracket"></i> Sair
+  </button>
+
+</div>
 
 <div id="pedidosEspera">
 
@@ -99,10 +153,29 @@ oninput="filtrarProdutos()"
 
 <div class="pagamentos">
 
-<button onclick="finalizar('dinheiro')">Dinheiro</button>
-<button onclick="finalizar('pix')">PIX</button>
-<button onclick="finalizar('debito')">Débito</button>
-<button onclick="finalizar('credito')">Crédito</button>
+<button onclick="pagarSimples('dinheiro')">
+<i class="fa-solid fa-money-bill"></i> Dinheiro
+</button>
+
+<button onclick="pagarSimples('pix')">
+<i class="fa-brands fa-pix"></i> PIX
+</button>
+
+<button onclick="pagarSimples('debito')">
+<i class="fa-solid fa-credit-card"></i> Débito
+</button>
+
+<button onclick="pagarSimples('credito')">
+<i class="fa-solid fa-credit-card"></i> Crédito
+</button>
+
+<button onclick="pagarSimples('ticket')">
+<i class="fa-solid fa-ticket"></i> Ticket
+</button>
+
+<button onclick="abrirPagamentoMisto()">
+<i class="fa-solid fa-layer-group"></i> Misto
+</button>
 
 </div>
 
