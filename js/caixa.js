@@ -415,7 +415,7 @@ carrinhoDiv.appendChild(div);
 
 });
 
-totalSpan.innerText="R$ "+total.toFixed(2);
+document.getElementById("badgeCarrinho").innerText = carrinho.length;
 
 }
 
@@ -997,3 +997,94 @@ document.body.appendChild(div);
 function esconderLoading(){
 document.getElementById("loading")?.remove();
 }
+
+window.trocarTela = (tela)=>{
+
+document.querySelector(".areaProdutos").style.display = "none";
+document.querySelector(".caixa").style.display = "none";
+
+if(tela === "produtos"){
+document.querySelector(".areaProdutos").style.display = "block";
+}
+
+if(tela === "carrinho"){
+document.querySelector(".caixa").style.display = "block";
+document.querySelector(".pagamentos").style.display = "none";
+}
+
+if(tela === "pagamento"){
+document.querySelector(".caixa").style.display = "block";
+document.querySelector(".pagamentos").style.display = "grid";
+}
+
+};
+
+function renderCategorias(){
+
+const categorias = [...new Set(listaProdutos.map(p=>p.categoria || "outros"))];
+
+const div = document.getElementById("categorias");
+
+div.innerHTML = `
+<button onclick="filtrarCategoria('todas')">
+🧾 Todas
+</button>
+`;
+
+categorias.forEach(cat=>{
+
+const icone = iconesCategorias[cat] || "📦";
+
+div.innerHTML += `
+<button onclick="filtrarCategoria('${cat}')">
+${icone} ${cat}
+</button>
+`;
+
+});
+
+}
+
+window.filtrarCategoria = (cat)=>{
+
+if(cat === "todas"){
+renderProdutos(listaProdutos);
+return;
+}
+
+const filtrados = listaProdutos.filter(p=>p.categoria === cat);
+
+renderProdutos(filtrados);
+
+};
+
+const iconesCategorias = {
+acai: "🍓",
+bebidas: "🥤",
+combos: "🍔",
+sobremesa: "🍰",
+outros: "📦"
+};
+
+window.filtrarCategoria = (cat)=>{
+
+document.querySelectorAll(".categorias button")
+.forEach(b=>b.classList.remove("ativa"));
+
+event.target.classList.add("ativa");
+
+if(cat === "todas"){
+renderProdutos(listaProdutos);
+return;
+}
+
+const filtrados = listaProdutos.filter(p=>p.categoria === cat);
+
+renderProdutos(filtrados);
+
+};
+
+document.querySelectorAll(".mobileNav button")
+.forEach(b=>b.classList.remove("ativo"));
+
+event.currentTarget.classList.add("ativo");

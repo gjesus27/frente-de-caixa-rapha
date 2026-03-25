@@ -116,6 +116,8 @@
 
 <div class="pdvContainer">
 
+<div id="categorias" class="categorias"></div>
+
 <!-- PRODUTOS -->
 
 <div class="areaProdutos">
@@ -182,6 +184,25 @@ oninput="filtrarProdutos()"
 </div>
 
 </div>
+
+<div class="mobileNav">
+  <button onclick="trocarTela('produtos')">
+    🛒 <span>Produtos</span>
+  </button>
+
+  <button onclick="trocarTela('carrinho')">
+    📦 <span>Carrinho</span>
+  </button>
+
+  <button onclick="trocarTela('pagamento')">
+    💳 <span>Pagamento</span>
+  </button>
+</div>
+
+<button id="btnFinalizarMobile" onclick="trocarTela('pagamento')">
+💳 Finalizar
+<span id="badgeCarrinho">0</span>
+</button>
 
 <script type="module" src="../js/caixa.js"></script>
 

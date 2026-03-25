@@ -545,3 +545,165 @@ width:100%;
 .modalBotoes button:hover{
   transform:scale(1.05);
 }
+
+.mobileNav{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+
+display:flex;
+justify-content:space-around;
+
+background:#5e17eb;
+padding:10px;
+z-index:9999;
+}
+
+.mobileNav button{
+background:white;
+border:none;
+padding:10px;
+border-radius:8px;
+font-size:18px;
+}
+
+@media(max-width:768px){
+
+.pagamentos{
+display:none;
+}
+
+}
+
+.categorias{
+display:flex;
+gap:10px;
+overflow:auto;
+margin-bottom:10px;
+}
+
+.categorias button{
+background:#eee;
+border:none;
+padding:8px 12px;
+border-radius:20px;
+cursor:pointer;
+white-space:nowrap;
+}
+
+#btnFinalizarMobile{
+position:fixed;
+bottom:70px;
+right:15px;
+
+background:#00c853;
+color:white;
+
+border:none;
+padding:15px 20px;
+border-radius:50px;
+
+font-weight:bold;
+font-size:16px;
+
+box-shadow:0 5px 15px rgba(0,0,0,0.3);
+z-index:9999;
+
+display:none;
+}
+
+#btnFinalizarMobile span{
+margin-left:8px;
+background:white;
+color:#00c853;
+padding:2px 8px;
+border-radius:50px;
+font-size:12px;
+}
+
+@media(max-width:768px){
+#btnFinalizarMobile{
+display:block;
+}
+}
+
+.categorias{
+display:flex;
+gap:10px;
+overflow:auto;
+padding-bottom:5px;
+}
+
+.categorias button{
+display:flex;
+align-items:center;
+gap:5px;
+
+background:white;
+border:none;
+
+padding:8px 14px;
+border-radius:20px;
+
+box-shadow:0 2px 6px rgba(0,0,0,0.1);
+
+cursor:pointer;
+white-space:nowrap;
+
+transition:0.2s;
+}
+
+.categorias button:hover{
+transform:scale(1.05);
+}
+
+.categorias button.ativa{
+background:#5e17eb;
+color:white;
+}
+
+.mobileNav{
+display:none; /* 🔥 ESCONDE NO DESKTOP */
+
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+
+justify-content:space-around;
+
+background:#5e17eb;
+padding:10px;
+z-index:9999;
+}
+
+@media(max-width:768px){
+.mobileNav{
+display:flex; /* 🔥 só aparece no mobile */
+}
+}
+
+.mobileNav button{
+display:flex;
+flex-direction:column; /* 🔥 icone em cima, texto embaixo */
+align-items:center;
+gap:3px;
+
+background:white;
+border:none;
+
+padding:8px;
+border-radius:10px;
+
+font-size:14px;
+}
+
+.mobileNav button span{
+font-size:11px;
+}
+
+.mobileNav button.ativo{
+background:#00c853;
+color:white;
+}
