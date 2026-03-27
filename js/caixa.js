@@ -393,20 +393,20 @@ renderProdutos(filtrados);
 function renderCarrinho(){
 
 carrinhoDiv.innerHTML="";
-total=0;
+total = 0;
 
 carrinho.forEach((item,i)=>{
 
-total+=Number(item.preco);
+total += Number(item.preco);
 
-const div=document.createElement("div");
+const div = document.createElement("div");
 
 div.classList.add("item");
 
 div.innerHTML=`
 <span>${item.nome}</span>
 <div>
-R$ ${item.preco}
+R$ ${Number(item.preco).toFixed(2)}
 <button onclick="remover(${i})">X</button>
 </div>
 `;
@@ -415,14 +415,17 @@ carrinhoDiv.appendChild(div);
 
 });
 
+totalSpan.innerText = "R$ " + total.toFixed(2);
+
 document.getElementById("badgeCarrinho").innerText = carrinho.length;
 
 }
 
-window.remover=(i)=>{
-carrinho.splice(i,1);
-renderCarrinho();
-};
+/* 👇 COLOCA AQUI */
+window.remover = (i)=>{
+  carrinho.splice(i,1);
+  renderCarrinho();
+}
 
 /* ========================== */
 /* FINALIZAR VENDA */
