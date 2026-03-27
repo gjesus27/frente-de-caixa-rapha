@@ -21,6 +21,8 @@ const carrinhoDiv = document.getElementById("carrinho");
 const totalSpan = document.getElementById("total");
 const listaPedidosDiv = document.getElementById("listaPedidos");
 
+let descontoPercentual = 0;
+
 /* ========================== */
 /* VARIÁVEIS */
 /* ========================== */
@@ -87,11 +89,15 @@ if(acaoConfirmar) await acaoConfirmar();
 modal.remove();
 };
 
-document.getElementById("btnCancelar").onclick = ()=>{
+modal.querySelector("#btnCancelar").onclick = ()=>{
 modal.remove();
 if(acaoCancelar) acaoCancelar();
 };
 
+modal.querySelector("#btnConfirmar").onclick = async ()=>{
+if(acaoConfirmar) await acaoConfirmar();
+modal.remove();
+};
 }
 
 /* ========================== */
@@ -765,6 +771,35 @@ localStorage.removeItem("usuarioLogado");
 window.location.href="login.html";
 };
 
+function pedirDesconto(callback){
+
+abrirModal(
+"Aplicar desconto?",
+`
+<p>Total atual: R$ ${total.toFixed(2)}</p>
+<input id="descontoInput" type="number" placeholder="% de desconto">
+`,
+()=>{
+
+const desconto = Number(document.getElementById("descontoInput").value) || 0;
+
+descontoPercentual = desconto;
+
+if(desconto > 0){
+const valorDesconto = total * (desconto / 100);
+total = total - valorDesconto;
+}
+
+// atualiza na tela
+totalSpan.innerText = "R$ " + total.toFixed(2);
+
+callback();
+
+}
+);
+
+}
+
 /* ========================== */
 /* NOVO SISTEMA DE PAGAMENTO */
 /* ========================== */
@@ -779,6 +814,10 @@ alert("Carrinho vazio");
 return;
 }
 
+// 👇 PRIMEIRO PEDE DESCONTO
+pedirDesconto(()=>{
+
+// 💰 DINHEIRO (com troco)
 if(tipo === "dinheiro"){
 
 abrirModal(
@@ -816,11 +855,14 @@ const pago = Number(document.getElementById("valorPago").value);
 const troco = pago - total;
 
 document.getElementById("trocoTexto").innerText =
-troco >= 0 ? "Troco: R$ "+troco.toFixed(2) : "Faltam: R$ "+Math.abs(troco).toFixed(2);
+troco >= 0 
+? "Troco: R$ "+troco.toFixed(2) 
+: "Faltam: R$ "+Math.abs(troco).toFixed(2);
 };
 
 },100);
 
+// 💸 OUTROS (pix, debito, credito, ticket, cashback)
 }else{
 
 finalizarVendaCompleta([
@@ -829,16 +871,24 @@ finalizarVendaCompleta([
 
 }
 
+}); 
+
 };
 
 /* PAGAMENTO MISTO */
 window.abrirPagamentoMisto = ()=>{
 
+if(total <= 0){
+alert("Carrinho vazio");
+return;
+}
+
+pedirDesconto(()=>{
+
 pagamentosTemp = [];
 
 abrirModal(
 "Pagamento Misto",
-
 `
 <select id="tipoPagamento">
 <option value="dinheiro">Dinheiro</option>
@@ -846,6 +896,7 @@ abrirModal(
 <option value="debito">Débito</option>
 <option value="credito">Crédito</option>
 <option value="ticket">Ticket</option>
+<option value="cashback">Cashback</option>
 </select>
 
 <input id="valorPagamento" type="number" placeholder="Valor">
@@ -858,10 +909,11 @@ abrirModal(
 <p id="totalPago">Pago: R$ 0.00</p>
 <p id="restante"></p>
 `,
-
-()=>confirmarPagamentoMisto()
+()=> pedirDesconto(()=>confirmarPagamentoMisto())
 
 );
+
+});
 
 };
 
