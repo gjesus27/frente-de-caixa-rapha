@@ -186,7 +186,7 @@ where("idCaixa","==",caixaId)
 
 const snapshot = await getDocs(q);
 
-let dinheiro=0,pix=0,debito=0,credito=0,ticket=0;
+let dinheiro=0,pix=0,debito=0,credito=0,ticket=0,cashback=0;
 
 /* 🔥 AQUI ESTÁ O QUE FALTAVA */
 snapshot.forEach(docSnap=>{
@@ -203,6 +203,7 @@ case "pix": pix+=p.valor; break;
 case "debito": debito+=p.valor; break;
 case "credito": credito+=p.valor; break;
 case "ticket": ticket+=p.valor; break;
+case "cashback": cashback+=p.valor; break;
 }
 
 });
@@ -238,6 +239,7 @@ abrirModal(
 <p><i class="fa-solid fa-credit-card"></i> Débito: R$ ${debito.toFixed(2)}</p>
 <p><i class="fa-solid fa-credit-card"></i> Crédito: R$ ${credito.toFixed(2)}</p>
 <p><i class="fa-solid fa-ticket"></i> Ticket: R$ ${ticket.toFixed(2)}</p>
+<p><i class="fa-solid fa-coins"></i> Cashback: R$ ${cashback.toFixed(2)}</p>
 
 <hr>
 
