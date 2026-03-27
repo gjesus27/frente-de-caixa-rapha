@@ -162,21 +162,40 @@ const fim = document.getElementById("fim").value
 /* 🔥 AGORA BUSCA EM VENDAS */
 const snapshot = await getDocs(collection(db,"vendas"))
 
+function parseData(input){
+  if(!input) return null
+
+  const [ano, mes, dia] = input.split("-")
+  return new Date(ano, mes - 1, dia)
+}
+
+const dataInicio = parseData(inicio)
+const dataFim = parseData(fim)
+
 snapshot.forEach(doc=>{
 
 const p = doc.data()
 
 if(!p) return
 
-/* 🔥 CORREÇÃO DO TIMESTAMP */
-const dataPedido = p.data?.toDate 
-? p.data.toDate() 
-: new Date(p.data)
+let dataPedido
+
+if(p.criadoEm?.toDate){
+  dataPedido = p.criadoEm.toDate()
+} else {
+  dataPedido = new Date(p.criadoEm)
+}
 
 /* FILTRO */
 
-if(inicio && dataPedido < new Date(inicio)) return
-if(fim && dataPedido > new Date(fim)) return
+if(dataInicio && dataPedido < dataInicio) return
+
+if(dataFim){
+  const fimDoDia = new Date(dataFim)
+  fimDoDia.setHours(23,59,59,999)
+
+  if(dataPedido > fimDoDia) return
+}
 
 const valor = Number(p.total || 0)
 
