@@ -1,117 +1,164 @@
 import { db } from "./firebaseConfig.js";
 
 import {
-collection,
-getDocs
+  collection,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-let aberto = null;
 
+/* ========================== */
+/* USUÁRIO */
+/* ========================== */
+
+const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
+
+function temPermissao(permissao){
+  return usuario && usuario.permissoes && usuario.permissoes.includes(permissao);
+}
+
+/* ========================== */
+/* ELEMENTOS */
+/* ========================== */
+
+let aberto = null;
 const listaUsuarios = document.getElementById("listaUsuarios");
 
-/* SE NÃO FOR TELA DE LOGIN */
+/* ========================== */
+/* LOGIN OU PROTEÇÃO */
+/* ========================== */
 
-if(!listaUsuarios){
-
-const logoutBtn = document.getElementById("logout");
-
-if(logoutBtn){
-logoutBtn.onclick = ()=>{
-localStorage.removeItem("usuarioLogado");
-window.location.href="../index.html";
-};
-}
+if(listaUsuarios){
+  // 🔓 TELA DE LOGIN
+  carregarUsuarios();
 
 }else{
-carregarUsuarios();
+
+  // 🔒 NÃO LOGADO
+  if(!usuario){
+    window.location.href = "../index.html";
+  }
+
+  const pagina = window.location.pathname;
+
+  // 🔒 dashboard
+  if(pagina.includes("dashboard.html")){
+    if(!temPermissao("admin")){
+      alert("Sem acesso ao dashboard");
+      window.location.href = "pdv.html";
+    }
+  }
+
+  // 🔒 entregas
+  if(pagina.includes("entregador.html")){
+    if(!temPermissao("admin")){
+      alert("Sem acesso às entregas");
+      window.location.href = "pdv.html";
+    }
+  }
+
+  // 🔒 produtos
+  if(pagina.includes("produtos.html")){
+    if(!temPermissao("admin") && !temPermissao("caixa")){
+      alert("Sem acesso aos produtos");
+      window.location.href = "pdv.html";
+    }
+  }
+
+  const logoutBtn = document.getElementById("logout");
+
+  if(logoutBtn){
+    logoutBtn.onclick = ()=>{
+      localStorage.removeItem("usuarioLogado");
+      window.location.href="../index.html";
+    };
+  }
+
 }
 
-
-
+/* ========================== */
 /* CARREGAR USUÁRIOS */
+/* ========================== */
 
 async function carregarUsuarios(){
 
-const snapshot = await getDocs(collection(db,"usuarios"));
+  const snapshot = await getDocs(collection(db,"usuarios"));
 
-snapshot.forEach((doc)=>{
+  listaUsuarios.innerHTML = "";
 
-const user = doc.data();
+  snapshot.forEach((doc)=>{
 
-if(!user.ativo) return;
+    const user = doc.data();
 
-const foto = user.foto || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+    if(!user.ativo) return;
 
-const card = document.createElement("div");
+    const foto = user.foto || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-card.classList.add("usuario");
+    const card = document.createElement("div");
 
-card.innerHTML = `
-<img src="${foto}">
-<p>${user.nome}</p>
+    card.classList.add("usuario");
 
-<div class="areaSenha">
-<input type="password" placeholder="Digite sua senha">
+    card.innerHTML = `
+      <img src="${foto}">
+      <p>${user.nome}</p>
 
-<div class="botoes">
-<button class="entrar">Entrar</button>
-<button class="cancelar">Cancelar</button>
-</div>
+      <div class="areaSenha">
+        <input type="password" placeholder="Digite sua senha">
 
-</div>
-`;
+        <div class="botoes">
+          <button class="entrar">Entrar</button>
+          <button class="cancelar">Cancelar</button>
+        </div>
+      </div>
+    `;
 
-const area = card.querySelector(".areaSenha");
-const input = card.querySelector("input");
-const entrar = card.querySelector(".entrar");
-const cancelar = card.querySelector(".cancelar");
+    const area = card.querySelector(".areaSenha");
+    const input = card.querySelector("input");
+    const entrar = card.querySelector(".entrar");
+    const cancelar = card.querySelector(".cancelar");
 
+    card.onclick = ()=>{
 
-card.onclick = ()=>{
+      if(aberto && aberto !== area){
+        aberto.style.display="none";
+      }
 
-if(aberto && aberto !== area){
-aberto.style.display="none";
-}
+      area.style.display="block";
+      aberto = area;
 
-area.style.display="block";
-aberto = area;
+    };
 
-};
+    cancelar.onclick = (e)=>{
+      e.stopPropagation();
+      area.style.display="none";
+    };
 
+    entrar.onclick = (e)=>{
 
-cancelar.onclick = (e)=>{
-e.stopPropagation();
-area.style.display="none";
-};
+      e.stopPropagation();
 
+      if(input.value !== user.senha){
+        alert("Senha incorreta");
+        return;
+      }
 
-entrar.onclick = (e)=>{
+      localStorage.setItem("usuarioLogado",JSON.stringify(user));
 
-e.stopPropagation();
+      const p = user.permissoes;
 
-if(input.value !== user.senha){
-alert("Senha incorreta");
-return;
-}
+      if(p.includes("admin")){
+        window.location.href="../pages/dashboard.html";
+      }
+      else if(p.includes("caixa")){
+        window.location.href="../pages/pdv.html";
+      }
+      else if(p.includes("entregador")){
+        window.location.href="../pages/entregador.html";
+      }
 
-localStorage.setItem("usuarioLogado",JSON.stringify(user));
+    };
 
-const p = user.permissoes;
+    listaUsuarios.appendChild(card);
 
-if(p.includes("admin")){
-window.location.href="../pages/dashboard.html";
-}
-else if(p.includes("caixa")){
-window.location.href="../pages/pdv.html";
-}
-else if(p.includes("entregador")){
-window.location.href="../pages/entregador.html";
-}
-
-};
-
-listaUsuarios.appendChild(card);
-
-});
+  });
 
 }

@@ -22,10 +22,9 @@ window.location.href = "login.html";
 
 elUser.innerText = usuario.nome;
 
-// 🔒 apenas admin acessa
-if(!usuario.permissoes.includes("admin")){
-alert("Acesso apenas para administradores");
-window.location.href = "pdv.html";
+if(!usuario.permissoes.includes("admin") && !usuario.permissoes.includes("caixa")){
+  alert("Sem acesso aos produtos");
+  window.location.href = "pdv.html";
 }
 
 }
