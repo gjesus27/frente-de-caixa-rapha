@@ -70,8 +70,8 @@ Relatório Excel
 </div>
 
 <div class="card">
-<h3>Previsão do Mês</h3>
-<p id="previsaoMes">R$0</p>
+<h3>Ranking de Caixas</h3>
+<div id="rankingCaixas"></div>
 </div>
 
 <div class="card">
@@ -152,6 +152,8 @@ let produtos = {}
 let pdv = 0
 let delivery = 0
 
+let ranking = {}
+
 lucroIfood = 0
 lucroKeeta = 0
 
@@ -201,6 +203,10 @@ const valor = Number(p.total || 0)
 
 total += valor
 pedidos++
+
+const nome = p.nomeUsuario || p.idUsuario || "Sem nome"
+
+ranking[nome] = (ranking[nome] || 0) + valor
 
 if(p.tipo === "pdv") pdv += valor
 else delivery += valor
@@ -254,17 +260,31 @@ let ticket = pedidos ? total/pedidos : 0
 document.getElementById("ticketMedio").innerText =
 "R$ "+ticket.toFixed(2)
 
+const rankingOrdenado = Object.entries(ranking)
+.sort((a,b)=> b[1] - a[1])
 
-/* PREVISÃO */
+const divRanking = document.getElementById("rankingCaixas")
 
-const hoje = new Date()
-const diaAtual = hoje.getDate()
+divRanking.innerHTML = ""
 
-let previsao = pedidos ? (total/diaAtual)*30 : 0
+rankingOrdenado.forEach((item, index)=>{
 
-document.getElementById("previsaoMes").innerText =
-"R$ "+previsao.toFixed(2)
+const nome = item[0]
+const valor = item[1]
 
+let medalha = ""
+
+if(index === 0) medalha = "🥇"
+else if(index === 1) medalha = "🥈"
+else if(index === 2) medalha = "🥉"
+
+divRanking.innerHTML += `
+  <p>
+    ${medalha} ${nome} <br>
+    <strong>R$ ${valor.toFixed(2)}</strong>
+  </p>
+`
+})
 
 criarGraficos(vendasDia,produtos,pdv,delivery)
 
