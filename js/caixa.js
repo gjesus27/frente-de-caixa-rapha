@@ -762,6 +762,10 @@ window.irDashboard=()=>{
 window.location.href="dashboard.html";
 };
 
+window.irHistorico=()=>{
+window.location.href="historico.html";
+};
+
 /* ========================== */
 /* LOGOUT */
 /* ========================== */

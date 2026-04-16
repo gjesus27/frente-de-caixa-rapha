@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Histórico de Vendas</title>
+  <link rel="stylesheet" href="../css/historico.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
+</head>
+<body>
+  <div class="layoutAdmin">
+    <aside class="sidebarAdmin">
+      <h2>Painel</h2>
+      <nav>
+        <a href="dashboard.html"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="pdv.html"><i class="fa-solid fa-cash-register"></i> PDV</a>
+        <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
+        <a href="entregador.html"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
+        <a href="historico.html" class="ativo"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</a>
+      </nav>
+      <button id="logout" class="sidebarAction sair">Sair</button>
+    </aside>
+
+    <main class="conteudoAdmin">
+      <header class="topoHistorico">
+        <div>
+          <h1>Histórico de Vendas</h1>
+          <p>Todas as vendas registradas no Firebase.</p>
+        </div>
+
+        <div class="acoesTopo">
+          <input type="text" id="buscaCliente" placeholder="Buscar por cliente ou ID...">
+          <button id="btnAtualizar"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+        </div>
+      </header>
+
+      <section class="filtros">
+        <label>
+          Status
+          <select id="filtroStatus">
+            <option value="todos">Todos</option>
+            <option value="finalizado">Concluída</option>
+            <option value="cancelado">Cancelada</option>
+          </select>
+        </label>
+
+        <label>
+          Data inicial
+          <input type="date" id="filtroInicio">
+        </label>
+
+        <label>
+          Data final
+          <input type="date" id="filtroFim">
+        </label>
+
+        <button id="btnFiltrar" class="btnSecundario"><i class="fa-solid fa-filter"></i> Filtrar</button>
+      </section>
+
+      <section id="estadoVazio" class="estadoVazio hidden">
+        <i class="fa-solid fa-box-open"></i>
+        <p>Nenhum registro encontrado.</p>
+      </section>
+
+      <section class="tabelaWrapper" id="tabelaWrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Data/Hora</th>
+              <th>Cliente</th>
+              <th>Total</th>
+              <th>Pagamento</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaVendas"></tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <div id="modalDetalhes" class="modalFundo hidden">
+    <div class="modalBox">
+      <h2 id="tituloDetalhes">Detalhes da venda</h2>
+      <div id="conteudoDetalhes"></div>
+      <div class="modalBotoes">
+        <button id="btnFecharDetalhes" class="btnSecundario">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalCancelar" class="modalFundo hidden">
+    <div class="modalBox">
+      <h2 id="tituloCancelar">Cancelar venda</h2>
+      <label for="motivoCancelamento">Motivo do cancelamento</label>
+      <textarea id="motivoCancelamento" placeholder="Ex.: cliente desistiu da compra"></textarea>
+      <div class="modalBotoes">
+        <button id="btnFecharCancelar" class="btnSecundario">Voltar</button>
+        <button id="btnConfirmarCancelamento" class="btnPerigo">Confirmar cancelamento</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../js/historico.js"></script>
+</body>
+</html>
