@@ -1,393 +1,336 @@
 import { db } from "./firebaseConfig.js";
-
 import {
-collection,
-addDoc,
-getDocs,
-updateDoc,
-doc,
-deleteDoc
+  collection,
+  addDoc,
+  getDocs,
+  updateDoc,
+  doc,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ==========================
-// USUARIO (SEM LOOP)
-// ==========================
 const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
-
-const elUser = document.getElementById("userName");
-
 if(!usuario){
-window.location.href = "login.html";
-}else{
+  window.location.href = "login.html";
+}
 
-elUser.innerText = usuario.nome;
-
-if(!usuario.permissoes.includes("admin") && !usuario.permissoes.includes("caixa")){
+if(usuario && !usuario.permissoes.includes("admin") && !usuario.permissoes.includes("caixa")){
   alert("Sem acesso aos produtos");
   window.location.href = "pdv.html";
 }
 
-}
-
-// ==========================
-// DOM
-// ==========================
 document.addEventListener("DOMContentLoaded", ()=>{
-
-const lista = document.getElementById("listaProdutos");
-const buscarInput = document.getElementById("buscarProduto");
-
-const modal = document.getElementById("modal");
-const abrirModal = document.getElementById("abrirModal");
-const fecharModal = document.getElementById("fecharModal");
-
-const nomeInput = document.getElementById("nomeProduto");
-const categoriaInput = document.getElementById("categoriaProduto");
-
-const precoInput = document.getElementById("precoProduto");
-const precoPromoInput = document.getElementById("precoPromo");
-
-const temEstoqueInput = document.getElementById("temEstoque");
-const estoqueInput = document.getElementById("estoqueProduto");
-
-const codigoBarrasInput = document.getElementById("codigoBarras");
-const numeroCodigoBarrasInput = document.getElementById("numeroCodigoBarras");
-
-const fotoInput = document.getElementById("fotoProduto");
-const preview = document.getElementById("previewImagem");
-
-const btnSalvar = document.getElementById("salvarProduto");
-const tituloModal = document.getElementById("tituloModal");
-
-let editandoId = null;
-let imagemAtual = "";
-let listaProdutos = [];
-
-// ==========================
-// MODAL
-// ==========================
-abrirModal.addEventListener("click", ()=>{
-editandoId = null;
-imagemAtual = "";
-tituloModal.innerText = "Novo Produto";
-modal.style.display = "block";
-});
-
-fecharModal.addEventListener("click", ()=>{
-modal.style.display = "none";
-});
-
-// ==========================
-// PREVIEW IMAGEM
-// ==========================
-fotoInput.onchange = ()=>{
-const file = fotoInput.files[0];
-
-if(file){
-preview.src = URL.createObjectURL(file);
-preview.style.display = "block";
-}
-};
-
-// ==========================
-// BUSCA
-// ==========================
-if(buscarInput){
-buscarInput.addEventListener("input", ()=>{
-
-const termo = buscarInput.value.toLowerCase();
-
-const filtrados = listaProdutos.filter(p=>
-p.nome.toLowerCase().includes(termo)
-);
-
-renderProdutos(filtrados);
-
-});
-}
-
-// ==========================
-// CAMPOS DINAMICOS
-// ==========================
-temEstoqueInput.addEventListener("change", ()=>{
-estoqueInput.style.display =
-temEstoqueInput.value === "sim" ? "block" : "none";
-});
-
-codigoBarrasInput.addEventListener("change", ()=>{
-numeroCodigoBarrasInput.style.display =
-codigoBarrasInput.value === "sim" ? "block" : "none";
-});
-
-// ==========================
-// FORMATAR PREÇO
-// ==========================
-function formatar(input){
-let v = input.value.replace(/\D/g,"");
-v = (Number(v)/100).toFixed(2);
-v = v.replace(".",",");
-input.value = "R$ " + v;
-}
-
-precoInput.addEventListener("input", ()=> formatar(precoInput));
-precoPromoInput.addEventListener("input", ()=> formatar(precoPromoInput));
-
-function pegarPrecoNumerico(valor){
-return Number(valor.replace("R$","").replace(",",".").trim());
-}
-
-// ==========================
-// IMG BB
-// ==========================
-async function uploadImagem(file){
-
-const apiKey = "23ab27ffdb2e70c117fa3d57f8d0cbf9";
-
-const formData = new FormData();
-formData.append("image", file);
-
-const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-method: "POST",
-body: formData
-});
-
-const data = await res.json();
-
-return data.data.url;
-
-}
-
-// ==========================
-// SALVAR
-// ==========================
-async function salvarProduto(){
-
-const nome = nomeInput.value;
-const categoria = categoriaInput.value;
-const preco = pegarPrecoNumerico(precoInput.value);
-
-const temEstoque = temEstoqueInput.value === "sim";
-const estoque = temEstoque ? Number(estoqueInput.value) : null;
-
-const precoPromocional = precoPromoInput.value
-? pegarPrecoNumerico(precoPromoInput.value)
-: null;
-
-const temCodigo = codigoBarrasInput.value === "sim";
-const codigoBarras = temCodigo ? numeroCodigoBarrasInput.value : null;
-
-let imagemURL = imagemAtual;
-
-if(fotoInput.files[0]){
-btnSalvar.innerText = "Enviando...";
-imagemURL = await uploadImagem(fotoInput.files[0]);
-btnSalvar.innerText = "Salvar";
-}
-
-if(editandoId){
-
-await updateDoc(doc(db,"produtos",editandoId),{
-nome,
-categoria,
-preco,
-precoPromocional,
-temEstoque,
-estoque,
-codigoBarras,
-temCodigoBarras: temCodigo,
-imagem: imagemURL
-});
-
-}else{
-
-await addDoc(collection(db,"produtos"),{
-nome,
-categoria,
-preco,
-precoPromocional,
-temEstoque,
-estoque,
-codigoBarras,
-temCodigoBarras: temCodigo,
-imagem: imagemURL,
-ativo:true
-});
-
-}
-
-modal.style.display="none";
-limpar();
-carregarProdutos();
-
-}
-
-btnSalvar.addEventListener("click", salvarProduto);
-
-// ==========================
-// LIMPAR
-// ==========================
-function limpar(){
-nomeInput.value="";
-categoriaInput.value="";
-precoInput.value="";
-precoPromoInput.value="";
-estoqueInput.value="";
-numeroCodigoBarrasInput.value="";
-fotoInput.value="";
-preview.style.display="none";
-imagemAtual="";
-}
-
-// ==========================
-// EDITAR
-// ==========================
-window.editarProduto = (p,id)=>{
-
-editandoId = id;
-imagemAtual = p.imagem || "";
-
-tituloModal.innerText = "Editar Produto";
-
-nomeInput.value = p.nome;
-categoriaInput.value = p.categoria;
-precoInput.value = "R$ " + Number(p.preco).toFixed(2).replace(".",",");
-precoPromoInput.value = p.precoPromocional 
-? "R$ " + Number(p.precoPromocional).toFixed(2).replace(".",",")
-: "";
-
-if(p.temEstoque){
-temEstoqueInput.value="sim";
-estoqueInput.style.display="block";
-estoqueInput.value=p.estoque;
-}else{
-temEstoqueInput.value="nao";
-estoqueInput.style.display="none";
-}
-
-if(p.temCodigoBarras){
-codigoBarrasInput.value="sim";
-numeroCodigoBarrasInput.style.display="block";
-numeroCodigoBarrasInput.value=p.codigoBarras || "";
-}else{
-codigoBarrasInput.value="nao";
-numeroCodigoBarrasInput.style.display="none";
-}
-
-modal.style.display="block";
-
-};
-
-// ==========================
-// EXCLUIR
-// ==========================
-window.excluirProduto = async(id)=>{
-
-if(!confirm("Excluir produto?")) return;
-
-await deleteDoc(doc(db,"produtos",id));
-carregarProdutos();
-
-};
-
-// ==========================
-// ATIVAR
-// ==========================
-window.toggleAtivo = async(id, status)=>{
-
-await updateDoc(doc(db,"produtos",id),{
-ativo: !status
-});
-
-carregarProdutos();
-
-};
-
-// ==========================
-// RENDER
-// ==========================
-function renderProdutos(listaRender){
-
-lista.innerHTML="";
-
-listaRender.forEach(p=>{
-
-lista.innerHTML += `
-
-<div class="cardProduto fadeIn">
-
-${p.imagem ? `<img src="${p.imagem}">` : ""}
-
-<div class="infoProduto">
-
-<h3>${p.nome}</h3>
-
-<p><i class="fa-solid fa-money-bill"></i> R$ ${Number(p.preco).toFixed(2)}</p>
-
-${p.precoPromocional ? 
-`<p class="promo"><i class="fa-solid fa-percent"></i> R$ ${Number(p.precoPromocional).toFixed(2)}</p>` 
-: ""}
-
-<p><i class="fa-solid fa-layer-group"></i> ${p.categoria || "Sem categoria"}</p>
-
-${p.temEstoque ? 
-`<p><i class="fa-solid fa-boxes-stacked"></i> ${p.estoque}</p>` 
-: `<p class="semEstoque">Sem controle de estoque</p>`}
-
-${p.temEstoque && p.estoque <= 5 ? 
-`<span class="estoqueBaixo">⚠ Estoque baixo</span>` 
-: ""}
-
-${p.codigoBarras ? 
-`<p><i class="fa-solid fa-barcode"></i> ${p.codigoBarras}</p>` 
-: ""}
-
-<p class="status">${p.ativo ? "🟢 Ativo" : "🔴 Inativo"}</p>
-
-</div>
-
-<div class="acoesProduto">
-
-<button class="btnEditar" onclick='editarProduto(${JSON.stringify(p)}, "${p.id}")'>
-<i class="fa-solid fa-pen-to-square"></i>
-</button>
-
-<button class="btnExcluir" onclick="excluirProduto('${p.id}')">
-<i class="fa-solid fa-trash-can"></i>
-</button>
-
-<button class="${p.ativo ? "btnAtivo" : "btnInativo"}" onclick="toggleAtivo('${p.id}', ${p.ativo})">
-<i class="fa-solid fa-power-off"></i>
-</button>
-
-</div>
-
-</div>
-
-`;
-
-});
-
-}
-
-// ==========================
-// LISTAR
-// ==========================
-async function carregarProdutos(){
-
-const snapshot = await getDocs(collection(db,"produtos"));
-
-listaProdutos = [];
-
-snapshot.forEach(docSnap=>{
-const p = docSnap.data();
-p.id = docSnap.id;
-listaProdutos.push(p);
-});
-
-renderProdutos(listaProdutos);
-
-}
-
-carregarProdutos();
-
+  const lista = document.getElementById("listaProdutos");
+  const tabelaWrapper = document.getElementById("tabelaWrapper");
+  const estadoVazio = document.getElementById("estadoVazio");
+
+  const modal = document.getElementById("modal");
+  const abrirModal = document.getElementById("abrirModal");
+  const fecharModal = document.getElementById("fecharModal");
+  const btnSalvar = document.getElementById("salvarProduto");
+  const tituloModal = document.getElementById("tituloModal");
+
+  const buscarInput = document.getElementById("buscarProduto");
+  const filtros = document.querySelectorAll(".filtroBtn");
+
+  const nomeInput = document.getElementById("nomeProduto");
+  const descricaoInput = document.getElementById("descricaoProduto");
+  const categoriaInput = document.getElementById("categoriaProduto");
+  const precoInput = document.getElementById("precoProduto");
+  const custoInput = document.getElementById("custoProduto");
+  const estoqueInput = document.getElementById("estoqueProduto");
+  const estoqueMinimoInput = document.getElementById("estoqueMinimo");
+  const precoPromoInput = document.getElementById("precoPromo");
+  const codigoBarrasInput = document.getElementById("numeroCodigoBarras");
+  const fotoInput = document.getElementById("fotoProduto");
+  const preview = document.getElementById("previewImagem");
+
+  const logoutBtn = document.getElementById("logout");
+
+  let listaProdutos = [];
+  let editandoId = null;
+  let imagemAtual = "";
+  let filtroAtual = "all";
+
+  logoutBtn?.addEventListener("click", ()=>{
+    localStorage.removeItem("usuarioLogado");
+    window.location.href = "login.html";
+  });
+
+  function parseMoeda(valor){
+    if(!valor) return 0;
+    const normalizado = String(valor)
+      .replace(/R\$/g, "")
+      .replace(/\s/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".");
+
+    const numero = Number(normalizado);
+    return Number.isFinite(numero) ? numero : 0;
+  }
+
+  function formatCurrency(valor){
+    return Number(valor || 0).toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
+  }
+
+  function abrirModalProduto(){
+    modal.classList.add("ativo");
+    modal.setAttribute("aria-hidden", "false");
+  }
+
+  function fecharModalProduto(){
+    modal.classList.remove("ativo");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  function limparForm(){
+    nomeInput.value = "";
+    descricaoInput.value = "";
+    categoriaInput.value = "";
+    precoInput.value = "";
+    custoInput.value = "";
+    estoqueInput.value = "0";
+    estoqueMinimoInput.value = "0";
+    precoPromoInput.value = "";
+    codigoBarrasInput.value = "";
+    fotoInput.value = "";
+    preview.hidden = true;
+    preview.src = "";
+    imagemAtual = "";
+  }
+
+  abrirModal.addEventListener("click", ()=>{
+    editandoId = null;
+    tituloModal.innerText = "Novo Produto";
+    limparForm();
+    abrirModalProduto();
+  });
+
+  fecharModal.addEventListener("click", fecharModalProduto);
+  modal.addEventListener("click", (e)=>{
+    if(e.target === modal) fecharModalProduto();
+  });
+
+  fotoInput.addEventListener("change", ()=>{
+    const file = fotoInput.files[0];
+    if(!file) return;
+
+    preview.src = URL.createObjectURL(file);
+    preview.hidden = false;
+  });
+
+  buscarInput.addEventListener("input", aplicarFiltros);
+
+  filtros.forEach((botao)=>{
+    botao.addEventListener("click", ()=>{
+      filtros.forEach((b)=>b.classList.remove("ativo"));
+      botao.classList.add("ativo");
+      filtroAtual = botao.dataset.filter || "all";
+      aplicarFiltros();
+    });
+  });
+
+  async function uploadImagem(file){
+    const apiKey = "23ab27ffdb2e70c117fa3d57f8d0cbf9";
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const resposta = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await resposta.json();
+    return data?.data?.url || "";
+  }
+
+  function getDescricaoProduto(produto){
+    return produto.descricao || produto.categoria || "Sem descrição";
+  }
+
+  function getQuantidadeProduto(produto){
+    return Number(produto.estoque ?? produto.quantity ?? 0);
+  }
+
+  function getMinimoProduto(produto){
+    return Number(produto.estoqueMinimo ?? produto.minQuantity ?? 0);
+  }
+
+  function getPrecoProduto(produto){
+    return Number(produto.preco ?? produto.price ?? 0);
+  }
+
+  function getCustoProduto(produto){
+    return Number(produto.custo ?? produto.costPrice ?? 0);
+  }
+
+  function renderProdutos(listaRender){
+    lista.innerHTML = "";
+
+    if(!listaRender.length){
+      tabelaWrapper.hidden = true;
+      estadoVazio.hidden = false;
+      return;
+    }
+
+    tabelaWrapper.hidden = false;
+    estadoVazio.hidden = true;
+
+    listaRender.forEach((p)=>{
+      const quantidade = getQuantidadeProduto(p);
+      const minimo = getMinimoProduto(p);
+      const baixo = quantidade <= minimo;
+
+      lista.innerHTML += `
+        <tr>
+          <td>
+            <span class="produtoNome">${p.nome || "Sem nome"}</span>
+            <span class="produtoDesc">${getDescricaoProduto(p)}</span>
+          </td>
+          <td class="preco">${formatCurrency(getPrecoProduto(p))}</td>
+          <td>${formatCurrency(getCustoProduto(p))}</td>
+          <td class="${baixo ? "qtdBaixa" : ""}">${quantidade}</td>
+          <td>${minimo}</td>
+          <td>
+            <span class="badge ${quantidade > 0 ? "ok" : "off"}">
+              ${quantidade > 0 ? "Em estoque" : "Esgotado"}
+            </span>
+          </td>
+          <td>
+            <div class="acoesLinha">
+              <button class="btnEditar" onclick="editarProduto('${p.id}')" title="Editar">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button class="btnExcluir" onclick="excluirProduto('${p.id}')" title="Excluir">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+              <button class="${p.ativo === false ? "btnInativo" : "btnAtivo"}" onclick="toggleAtivo('${p.id}', ${p.ativo === false})" title="Ativar/desativar">
+                <i class="fa-solid fa-power-off"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  function aplicarFiltros(){
+    const termo = buscarInput.value.trim().toLowerCase();
+
+    const filtrado = listaProdutos.filter((produto)=>{
+      const nome = String(produto.nome || "").toLowerCase();
+      const categoria = String(produto.categoria || "").toLowerCase();
+      const quantidade = getQuantidadeProduto(produto);
+
+      const matchBusca = !termo || nome.includes(termo) || categoria.includes(termo);
+      if(!matchBusca) return false;
+
+      if(filtroAtual === "inStock") return quantidade > 0;
+      if(filtroAtual === "outOfStock") return quantidade === 0;
+      return true;
+    });
+
+    renderProdutos(filtrado);
+  }
+
+  window.editarProduto = (id)=>{
+    const p = listaProdutos.find((produto)=>produto.id === id);
+    if(!p) return;
+
+    editandoId = id;
+    imagemAtual = p.imagem || "";
+
+    tituloModal.innerText = "Editar Produto";
+    nomeInput.value = p.nome || "";
+    descricaoInput.value = p.descricao || "";
+    categoriaInput.value = p.categoria || "";
+    precoInput.value = getPrecoProduto(p) || "";
+    custoInput.value = getCustoProduto(p) || "";
+    estoqueInput.value = getQuantidadeProduto(p);
+    estoqueMinimoInput.value = getMinimoProduto(p);
+    precoPromoInput.value = Number(p.precoPromocional || 0) || "";
+    codigoBarrasInput.value = p.codigoBarras || "";
+
+    if(imagemAtual){
+      preview.src = imagemAtual;
+      preview.hidden = false;
+    } else {
+      preview.src = "";
+      preview.hidden = true;
+    }
+
+    abrirModalProduto();
+  };
+
+  window.excluirProduto = async(id)=>{
+    if(!confirm("Excluir produto?")) return;
+    await deleteDoc(doc(db, "produtos", id));
+    await carregarProdutos();
+  };
+
+  window.toggleAtivo = async(id, inativo)=>{
+    await updateDoc(doc(db, "produtos", id), { ativo: inativo });
+    await carregarProdutos();
+  };
+
+  async function salvarProduto(){
+    const nome = nomeInput.value.trim();
+    const preco = parseMoeda(precoInput.value);
+
+    if(!nome || !preco){
+      alert("Preencha ao menos nome e preço do produto.");
+      return;
+    }
+
+    let imagemURL = imagemAtual;
+    if(fotoInput.files[0]){
+      btnSalvar.disabled = true;
+      btnSalvar.innerText = "Enviando...";
+      imagemURL = await uploadImagem(fotoInput.files[0]);
+      btnSalvar.disabled = false;
+      btnSalvar.innerText = "Salvar";
+    }
+
+    const payload = {
+      nome,
+      descricao: descricaoInput.value.trim(),
+      categoria: categoriaInput.value.trim(),
+      preco,
+      custo: parseMoeda(custoInput.value),
+      precoPromocional: parseMoeda(precoPromoInput.value) || null,
+      estoque: Number(estoqueInput.value || 0),
+      estoqueMinimo: Number(estoqueMinimoInput.value || 0),
+      temEstoque: true,
+      codigoBarras: codigoBarrasInput.value.trim() || null,
+      temCodigoBarras: Boolean(codigoBarrasInput.value.trim()),
+      imagem: imagemURL,
+      ativo: true
+    };
+
+    if(editandoId){
+      await updateDoc(doc(db, "produtos", editandoId), payload);
+    } else {
+      await addDoc(collection(db, "produtos"), payload);
+    }
+
+    fecharModalProduto();
+    limparForm();
+    await carregarProdutos();
+  }
+
+  btnSalvar.addEventListener("click", salvarProduto);
+
+  async function carregarProdutos(){
+    const snapshot = await getDocs(collection(db, "produtos"));
+
+    listaProdutos = [];
+    snapshot.forEach((docSnap)=>{
+      const produto = docSnap.data();
+      produto.id = docSnap.id;
+      listaProdutos.push(produto);
+    });
+
+    aplicarFiltros();
+  }
+
+  carregarProdutos();
 });
