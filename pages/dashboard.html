@@ -1,419 +1,254 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
-
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard</title>
-
 <link rel="stylesheet" href="../css/dashboard.css">
-
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
-
 </head>
-
 <body>
+<div class="layoutAdmin">
+  <aside class="sidebarAdmin">
+    <h2>Painel</h2>
+    <nav>
+      <a href="dashboard.html" class="ativo"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="pdv.html"><i class="fa-solid fa-cash-register"></i> PDV</a>
+      <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
+      <a href="entregador.html"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
+    </nav>
+    <button id="logout" class="sidebarAction sair">Sair</button>
+  </aside>
 
-<header>
+  <main class="conteudoAdmin">
+    <header class="dashHeader">
+      <h1>Dashboard</h1>
+      <p>Resumo das operações de hoje.</p>
+    </header>
 
-<h1>Painel Administrativo</h1>
+    <section class="metricsGrid">
+      <article class="metricCard">
+        <div class="metricTop">
+          <div>
+            <p class="metricLabel">Vendas do Dia</p>
+            <h3 id="vendasDia">R$ 0,00</h3>
+          </div>
+          <span class="metricIcon"><i class="fa-solid fa-dollar-sign"></i></span>
+        </div>
+        <p id="comparativoDia" class="metricHint">Comparativo com ontem</p>
+      </article>
 
-<nav>
+      <article class="metricCard destaquePrimario">
+        <div class="metricTop">
+          <div>
+            <p class="metricLabel">Pedidos Aguardando</p>
+            <h3 id="pedidosAguardando">0</h3>
+          </div>
+          <span class="metricIcon"><i class="fa-solid fa-cart-shopping"></i></span>
+        </div>
+        <p class="metricHint">Status aguardando preparo</p>
+      </article>
 
-<a href="pdv.html"><button>PDV</button></a>
-<a href="produtos.html"><button>Produtos</button></a>
-<a href="entregador.html"><button>Entregas</button></a>
+      <article class="metricCard destaqueErro">
+        <div class="metricTop">
+          <div>
+            <p class="metricLabel">Estoque Crítico</p>
+            <h3 id="estoqueCritico">0 itens abaixo do mínimo</h3>
+          </div>
+          <span class="metricIcon"><i class="fa-solid fa-boxes-stacked"></i></span>
+        </div>
+        <a href="produtos.html" class="metricLink">Verificar estoque <i class="fa-solid fa-arrow-right"></i></a>
+      </article>
+    </section>
 
-<button onclick="baixarExcel()">
-<i class="fa-solid fa-file-excel"></i>
-Relatório Excel
-</button>
+    <section class="painelGrid">
+      <article class="card chartCard">
+        <div class="cardHeader">
+          <h2>Fluxo de Caixa</h2>
+          <p>Receita vs. Despesas nos últimos 7 dias</p>
+        </div>
+        <div class="chartWrap">
+          <canvas id="graficoFluxo"></canvas>
+        </div>
+      </article>
 
-<button id="logout">Sair</button>
-
-</nav>
-
-</header>
-
-
-<section class="filtros">
-
-<input type="date" id="inicio">
-<input type="date" id="fim">
-
-<button onclick="filtrar()">Filtrar</button>
-
-</section>
-
-
-
-<section class="cards">
-
-<div class="card">
-<h3>Total Vendido</h3>
-<p id="totalVendido">R$0</p>
+      <article class="card pedidosCard">
+        <div class="cardHeader linha">
+          <h2>Últimas Vendas</h2>
+          <a href="pdv.html">Ver PDV</a>
+        </div>
+        <div id="listaPedidosRecentes" class="listaPedidosRecentes"></div>
+      </article>
+    </section>
+  </main>
 </div>
-
-<div class="card">
-<h3>Pedidos</h3>
-<p id="totalPedidos">0</p>
-</div>
-
-<div class="card">
-<h3>Ticket Médio</h3>
-<p id="ticketMedio">R$0</p>
-</div>
-
-<div class="card">
-<h3>Ranking de Caixas</h3>
-<div id="rankingCaixas"></div>
-</div>
-
-<div class="card">
-<h3>Vendas iFood</h3>
-
-<input id="inputIfood" type="number" placeholder="Digite valor">
-
-<button onclick="salvarIfood()">Salvar</button>
-
-<p id="lucroIfood">R$0</p>
-
-</div>
-
-<div class="card">
-
-<h3>Vendas Keeta</h3>
-
-<input id="inputKeeta" type="number" placeholder="Digite valor">
-
-<button onclick="salvarKeeta()">Salvar</button>
-
-<p id="lucroKeeta">R$0</p>
-
-</div>
-
-</section>
-
-
-
-<section class="graficos">
-
-<div class="grafico">
-<h3>Vendas por Dia</h3>
-<canvas id="graficoVendas"></canvas>
-</div>
-
-<div class="grafico">
-<h3>Produtos Mais Vendidos</h3>
-<canvas id="graficoProdutos"></canvas>
-</div>
-
-<div class="grafico">
-<h3>PDV vs Delivery</h3>
-<canvas id="graficoPlataforma"></canvas>
-</div>
-
-</section>
-
-
-
-<!-- TROQUE APENAS O SCRIPT PELO DE BAIXO -->
 
 <script type="module">
-
 import { db } from "../js/firebaseConfig.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import {
-collection,
-getDocs,
-addDoc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+let graficoFluxo;
 
-let grafico1
-let grafico2
-let grafico3
+const brl = (v)=> `R$ ${Number(v || 0).toFixed(2).replace('.',',')}`;
 
-let lucroIfood = 0
-let lucroKeeta = 0
-
-async function carregar(){
-
-let total = 0
-let pedidos = 0
-
-let vendasDia = {}
-let produtos = {}
-
-let pdv = 0
-let delivery = 0
-
-let ranking = {}
-
-lucroIfood = 0
-lucroKeeta = 0
-
-const inicio = document.getElementById("inicio").value
-const fim = document.getElementById("fim").value
-
-
-/* 🔥 AGORA BUSCA EM VENDAS */
-const snapshot = await getDocs(collection(db,"vendas"))
-
-function parseData(input){
-  if(!input) return null
-
-  const [ano, mes, dia] = input.split("-")
-  return new Date(ano, mes - 1, dia)
+function mesmoDia(dataA, dataB){
+  return dataA.getFullYear() === dataB.getFullYear()
+    && dataA.getMonth() === dataB.getMonth()
+    && dataA.getDate() === dataB.getDate();
 }
 
-const dataInicio = parseData(inicio)
-const dataFim = parseData(fim)
-
-snapshot.forEach(doc=>{
-
-const p = doc.data()
-
-if(!p) return
-
-let dataPedido
-
-if(p.criadoEm?.toDate){
-  dataPedido = p.criadoEm.toDate()
-} else {
-  dataPedido = new Date(p.criadoEm)
+function obterData(val){
+  if(!val) return null;
+  if(val?.toDate) return val.toDate();
+  const d = new Date(val);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/* FILTRO */
-
-if(dataInicio && dataPedido < dataInicio) return
-
-if(dataFim){
-  const fimDoDia = new Date(dataFim)
-  fimDoDia.setHours(23,59,59,999)
-
-  if(dataPedido > fimDoDia) return
+function rotuloDia(d){
+  return d.toLocaleDateString("pt-BR", { weekday: "short" }).replace('.', '').toUpperCase();
 }
 
-const valor = Number(p.total || 0)
+async function carregarDashboard(){
+  const hoje = new Date();
+  const ontem = new Date();
+  ontem.setDate(hoje.getDate() - 1);
 
-total += valor
-pedidos++
+  const dias = Array.from({ length: 7 }, (_, i)=>{
+    const data = new Date();
+    data.setHours(0,0,0,0);
+    data.setDate(data.getDate() - (6 - i));
+    return data;
+  });
 
-const nome = p.nomeUsuario || p.idUsuario || "Sem nome"
+  const receitaPorDia = {};
+  const despesasPorDia = {};
 
-ranking[nome] = (ranking[nome] || 0) + valor
+  dias.forEach(d=>{
+    const chave = d.toISOString().slice(0,10);
+    receitaPorDia[chave] = 0;
+    despesasPorDia[chave] = 0;
+  });
 
-if(p.tipo === "pdv") pdv += valor
-else delivery += valor
+  let totalHoje = 0;
+  let totalOntem = 0;
+  const vendasRecentes = [];
 
+  const vendasSnap = await getDocs(collection(db,"vendas"));
+  vendasSnap.forEach(docSnap=>{
+    const venda = docSnap.data();
+    const dataVenda = obterData(venda.criadoEm);
+    if(!dataVenda) return;
 
-const dia = dataPedido.toLocaleDateString()
+    const total = Number(venda.total || 0);
 
-vendasDia[dia] = (vendasDia[dia] || 0) + valor
+    if(mesmoDia(dataVenda, hoje)) totalHoje += total;
+    if(mesmoDia(dataVenda, ontem)) totalOntem += total;
 
+    const chave = dataVenda.toISOString().slice(0,10);
+    if(chave in receitaPorDia) receitaPorDia[chave] += total;
 
-if(p.itens){
+    vendasRecentes.push({
+      id: docSnap.id.slice(0,6).toUpperCase(),
+      tipo: venda.tipo || "balcao",
+      item: venda.itens?.[0]?.nome || "Venda sem item",
+      criadoEm: dataVenda.getTime(),
+      horario: dataVenda.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      status: venda.status || "finalizado"
+    });
+  });
 
-p.itens.forEach(i=>{
+  const retiradasSnap = await getDocs(collection(db,"retiradas"));
+  retiradasSnap.forEach(docSnap=>{
+    const retirada = docSnap.data();
+    const dataRetirada = obterData(retirada.data);
+    if(!dataRetirada) return;
 
-produtos[i.nome] = (produtos[i.nome] || 0) + Number(i.qtd || 0)
+    const chave = dataRetirada.toISOString().slice(0,10);
+    if(chave in despesasPorDia) despesasPorDia[chave] += Number(retirada.valor || 0);
+  });
 
-})
+  const pedidosSnap = await getDocs(collection(db,"pedidos"));
+  let aguardando = 0;
+  pedidosSnap.forEach(docSnap=>{
+    const pedido = docSnap.data();
+    if(pedido.status === "aguardando_preparo") aguardando++;
+  });
 
+  const produtosSnap = await getDocs(collection(db,"produtos"));
+  let estoqueCritico = 0;
+  produtosSnap.forEach(docSnap=>{
+    const produto = docSnap.data();
+    const estoque = Number(produto.estoque || 0);
+    const minimo = Number(produto.estoqueMinimo || 5);
+    if(produto.temEstoque !== "nao" && estoque <= minimo) estoqueCritico++;
+  });
+
+  document.getElementById("vendasDia").innerText = brl(totalHoje);
+  document.getElementById("pedidosAguardando").innerText = aguardando;
+  document.getElementById("estoqueCritico").innerText = `${estoqueCritico} itens abaixo do mínimo`;
+
+  const variacao = totalOntem > 0 ? ((totalHoje - totalOntem) / totalOntem) * 100 : 0;
+  const sinal = variacao >= 0 ? "+" : "";
+  document.getElementById("comparativoDia").innerText = `${sinal}${variacao.toFixed(1)}% comparado com ontem`;
+
+  renderGrafico(dias, receitaPorDia, despesasPorDia);
+  renderVendasRecentes(vendasRecentes);
 }
 
-})
+function renderGrafico(dias, receitaPorDia, despesasPorDia){
+  if(graficoFluxo) graficoFluxo.destroy();
 
+  const labels = dias.map(rotuloDia);
+  const receitas = dias.map(d=> receitaPorDia[d.toISOString().slice(0,10)] || 0);
+  const despesas = dias.map(d=> despesasPorDia[d.toISOString().slice(0,10)] || 0);
 
-/* IFOOD / KEETA */
-
-const plataformas = await getDocs(collection(db,"plataformas"))
-
-plataformas.forEach(doc=>{
-
-const p = doc.data()
-
-if(p.tipo === "ifood") lucroIfood += Number(p.valor || 0)
-if(p.tipo === "keeta") lucroKeeta += Number(p.valor || 0)
-
-})
-
-
-/* UI */
-
-document.getElementById("totalVendido").innerText = "R$ "+total.toFixed(2)
-document.getElementById("totalPedidos").innerText = pedidos
-
-document.getElementById("lucroIfood").innerText = "R$ "+lucroIfood.toFixed(2)
-document.getElementById("lucroKeeta").innerText = "R$ "+lucroKeeta.toFixed(2)
-
-
-/* TICKET MÉDIO */
-
-let ticket = pedidos ? total/pedidos : 0
-
-document.getElementById("ticketMedio").innerText =
-"R$ "+ticket.toFixed(2)
-
-const rankingOrdenado = Object.entries(ranking)
-.sort((a,b)=> b[1] - a[1])
-
-const divRanking = document.getElementById("rankingCaixas")
-
-divRanking.innerHTML = ""
-
-rankingOrdenado.forEach((item, index)=>{
-
-const nome = item[0]
-const valor = item[1]
-
-let medalha = ""
-
-if(index === 0) medalha = "🥇"
-else if(index === 1) medalha = "🥈"
-else if(index === 2) medalha = "🥉"
-
-divRanking.innerHTML += `
-  <p>
-    ${medalha} ${nome} <br>
-    <strong>R$ ${valor.toFixed(2)}</strong>
-  </p>
-`
-})
-
-criarGraficos(vendasDia,produtos,pdv,delivery)
-
+  graficoFluxo = new Chart(document.getElementById("graficoFluxo"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        { label: "Receita", data: receitas, backgroundColor: "#20b26b", borderRadius: 8 },
+        { label: "Despesas", data: despesas, backgroundColor: "#1f3f90", borderRadius: 8 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "top" } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
 }
 
-carregar()
+function renderVendasRecentes(vendas){
+  const container = document.getElementById("listaPedidosRecentes");
+  const recentes = vendas.sort((a,b)=> b.criadoEm - a.criadoEm).slice(0,6);
 
+  if(recentes.length === 0){
+    container.innerHTML = '<p class="vazio">Nenhuma venda encontrada.</p>';
+    return;
+  }
 
-/* GRAFICOS */
-
-function criarGraficos(vendasDia,produtos,pdv,delivery){
-
-if(grafico1) grafico1.destroy()
-if(grafico2) grafico2.destroy()
-if(grafico3) grafico3.destroy()
-
-
-grafico1 = new Chart(document.getElementById("graficoVendas"),{
-type:"line",
-data:{
-labels:Object.keys(vendasDia),
-datasets:[{
-label:"Vendas",
-data:Object.values(vendasDia),
-borderWidth:3,
-tension:0.4
-}]
-}
-})
-
-
-grafico2 = new Chart(document.getElementById("graficoProdutos"),{
-type:"bar",
-data:{
-labels:Object.keys(produtos),
-datasets:[{
-label:"Quantidade",
-data:Object.values(produtos)
-}]
-}
-})
-
-
-grafico3 = new Chart(document.getElementById("graficoPlataforma"),{
-type:"doughnut",
-data:{
-labels:["PDV","Delivery"],
-datasets:[{
-data:[pdv,delivery]
-}]
-}
-})
-
+  container.innerHTML = recentes.map(v=>`
+    <div class="pedidoItem">
+      <div class="pedidoInfo">
+        <p class="pedidoTitulo">${v.tipo.toUpperCase()} - ${v.item}</p>
+        <p class="pedidoMeta">Pedido ${v.id} • ${v.horario}</p>
+      </div>
+      <span class="pedidoStatus ${v.status === "finalizado" ? "ok" : "pendente"}">${v.status}</span>
+    </div>
+  `).join("");
 }
 
+document.getElementById("logout").onclick = ()=>{
+  localStorage.removeItem("usuarioLogado");
+  window.location.href = "login.html";
+};
 
-/* FILTRO */
-
-window.filtrar = function(){
-carregar()
-}
-
-
-/* SALVAR IFOOD */
-
-window.salvarIfood = async function(){
-
-const valor = Number(document.getElementById("inputIfood").value)
-
-if(!valor) return alert("Digite um valor")
-
-await addDoc(collection(db,"plataformas"),{
-tipo:"ifood",
-valor:valor,
-data:new Date()
-})
-
-alert("Salvo")
-carregar()
-
-}
-
-
-/* SALVAR KEETA */
-
-window.salvarKeeta = async function(){
-
-const valor = Number(document.getElementById("inputKeeta").value)
-
-if(!valor) return alert("Digite um valor")
-
-await addDoc(collection(db,"plataformas"),{
-tipo:"keeta",
-valor:valor,
-data:new Date()
-})
-
-alert("Salvo")
-carregar()
-
-}
-
-
-/* EXCEL */
-
-window.baixarExcel = function(){
-
-const dados = [{
-total:document.getElementById("totalVendido").innerText,
-pedidos:document.getElementById("totalPedidos").innerText,
-ticket:document.getElementById("ticketMedio").innerText,
-previsao:document.getElementById("previsaoMes").innerText,
-ifood:document.getElementById("lucroIfood").innerText,
-keeta:document.getElementById("lucroKeeta").innerText
-}]
-
-const planilha = XLSX.utils.json_to_sheet(dados)
-
-const arquivo = XLSX.utils.book_new()
-
-XLSX.utils.book_append_sheet(arquivo,planilha,"Dashboard")
-
-XLSX.writeFile(arquivo,"relatorio_dashboard.xlsx")
-
-}
-
+carregarDashboard();
 </script>
-
-<script type="module" src="../js/auth.js"></script>
-
+<script src="../js/sessao.js"></script>
 </body>
 </html>
