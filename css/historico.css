@@ -1,0 +1,260 @@
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+  background:#f7f8fc;
+  color:#111827;
+}
+
+.layoutAdmin{
+  display:flex;
+  min-height:100vh;
+}
+
+.sidebarAdmin{
+  width:250px;
+  background:#111827;
+  color:#fff;
+  padding:24px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.sidebarAdmin h2{
+  font-size:22px;
+  margin-bottom:6px;
+}
+
+.sidebarAdmin nav{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.sidebarAdmin nav a{
+  color:#e5e7eb;
+  text-decoration:none;
+  padding:10px 12px;
+  border-radius:10px;
+  transition:background .2s;
+}
+
+.sidebarAdmin nav a:hover,
+.sidebarAdmin nav a.ativo{
+  background:#374151;
+}
+
+.sidebarAction{
+  margin-top:auto;
+  border:none;
+  border-radius:10px;
+  padding:10px 12px;
+  cursor:pointer;
+}
+
+.sair{
+  background:#ef4444;
+  color:#fff;
+}
+
+.conteudoAdmin{
+  flex:1;
+  padding:24px;
+}
+
+.topoHistorico{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:16px;
+  margin-bottom:18px;
+}
+
+.topoHistorico h1{
+  font-size:30px;
+}
+
+.topoHistorico p{
+  color:#6b7280;
+  margin-top:4px;
+}
+
+.acoesTopo{
+  display:flex;
+  gap:10px;
+}
+
+input, select, textarea{
+  border:1px solid #d1d5db;
+  border-radius:10px;
+  padding:10px 12px;
+}
+
+.acoesTopo input{
+  min-width:250px;
+}
+
+button{
+  border:none;
+  border-radius:10px;
+  padding:10px 14px;
+  font-weight:700;
+  cursor:pointer;
+  background:#2563eb;
+  color:#fff;
+}
+
+.btnSecundario{
+  background:#e5e7eb;
+  color:#111827;
+}
+
+.btnPerigo{
+  background:#dc2626;
+}
+
+.filtros{
+  display:flex;
+  gap:12px;
+  align-items:flex-end;
+  flex-wrap:wrap;
+  margin-bottom:16px;
+}
+
+.filtros label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  font-size:14px;
+  color:#374151;
+}
+
+.tabelaWrapper{
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 6px 24px rgba(0,0,0,.05);
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+thead{
+  background:#f3f4f6;
+}
+
+th, td{
+  text-align:left;
+  padding:14px 16px;
+  border-bottom:1px solid #e5e7eb;
+  white-space:nowrap;
+}
+
+td .acoes{
+  display:flex;
+  gap:8px;
+}
+
+.badge{
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.badgeConcluida{
+  color:#166534;
+  background:#dcfce7;
+}
+
+.badgeCancelada{
+  color:#991b1b;
+  background:#fee2e2;
+}
+
+.estadoVazio{
+  text-align:center;
+  padding:70px 20px;
+  color:#6b7280;
+}
+
+.estadoVazio i{
+  font-size:50px;
+  margin-bottom:10px;
+}
+
+.hidden{
+  display:none !important;
+}
+
+.modalFundo{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+}
+
+.modalBox{
+  width:min(520px,95vw);
+  background:#fff;
+  border-radius:14px;
+  padding:20px;
+}
+
+.modalBox h2{
+  margin-bottom:12px;
+}
+
+.modalBox textarea{
+  width:100%;
+  min-height:110px;
+  resize:vertical;
+}
+
+.modalBotoes{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+}
+
+#conteudoDetalhes{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  color:#374151;
+}
+
+#conteudoDetalhes ul{
+  padding-left:18px;
+}
+
+@media(max-width:900px){
+  .layoutAdmin{
+    flex-direction:column;
+  }
+
+  .sidebarAdmin{
+    width:100%;
+  }
+
+  .topoHistorico{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .acoesTopo input{
+    min-width:0;
+    flex:1;
+  }
+}
