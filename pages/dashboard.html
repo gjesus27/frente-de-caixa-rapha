@@ -26,67 +26,102 @@
   </aside>
 
   <main class="conteudoAdmin">
-    <header>
-      <h1>Painel Administrativo</h1>
+    <header class="topoDashboard">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Resumo das operações com dados em tempo real do Firebase.</p>
+      </div>
+      <section class="filtros">
+        <input type="date" id="inicio">
+        <input type="date" id="fim">
+        <button onclick="filtrar()">Filtrar</button>
+      </section>
     </header>
 
-    <section class="filtros">
-      <input type="date" id="inicio">
-      <input type="date" id="fim">
-      <button onclick="filtrar()">Filtrar</button>
+    <section class="cardsResumo">
+      <article class="cardResumo destaqueVerde">
+        <div>
+          <h3>Vendas do período</h3>
+          <p id="totalVendido">R$ 0,00</p>
+          <small id="comparativoVendas">--</small>
+        </div>
+        <i class="fa-solid fa-dollar-sign"></i>
+      </article>
+
+      <article class="cardResumo destaqueRoxo">
+        <div>
+          <h3>Pedidos aguardando</h3>
+          <p id="pedidosAguardando">0</p>
+          <small>status aguardando_preparo e em_preparo</small>
+        </div>
+        <i class="fa-solid fa-cart-shopping"></i>
+      </article>
+
+      <article class="cardResumo destaqueVermelho">
+        <div>
+          <h3>Estoque crítico</h3>
+          <p id="estoqueCritico">0 itens</p>
+          <small>Produtos abaixo do estoque mínimo</small>
+        </div>
+        <i class="fa-solid fa-box-open"></i>
+      </article>
+
+      <article class="cardResumo destaqueAzul cardCompacto">
+        <div>
+          <h3>Pedidos / Ticket médio</h3>
+          <p><span id="totalPedidos">0</span> • <span id="ticketMedio">R$ 0,00</span></p>
+          <small>PDV: <strong id="totalPdv">R$ 0,00</strong> • Delivery: <strong id="totalDelivery">R$ 0,00</strong></small>
+        </div>
+      </article>
     </section>
 
-    <section class="cards">
-      <div class="card">
-        <h3>Total Vendido</h3>
-        <p id="totalVendido">R$0</p>
-      </div>
+    <section class="gridPrincipal">
+      <article class="painelCard cardLargo">
+        <div class="cardHeader">
+          <div>
+            <h3>Fluxo de Caixa</h3>
+            <p>Receita vs despesas dos últimos 7 dias</p>
+          </div>
+        </div>
+        <div class="graficoArea">
+          <canvas id="graficoFluxo"></canvas>
+        </div>
+      </article>
 
-      <div class="card">
-        <h3>Pedidos</h3>
-        <p id="totalPedidos">0</p>
-      </div>
+      <article class="painelCard">
+        <div class="cardHeader">
+          <h3>Ranking de caixas</h3>
+        </div>
+        <div id="rankingCaixas" class="listaRanking"></div>
+      </article>
 
-      <div class="card">
-        <h3>Ticket Médio</h3>
-        <p id="ticketMedio">R$0</p>
-      </div>
+      <article class="painelCard">
+        <div class="cardHeader">
+          <h3>Últimos pedidos</h3>
+        </div>
+        <div id="ultimosPedidos" class="listaPedidos"></div>
+      </article>
 
-      <div class="card">
-        <h3>Ranking de Caixas</h3>
-        <div id="rankingCaixas"></div>
-      </div>
+      <article class="painelCard">
+        <div class="cardHeader">
+          <h3>Vendas iFood e Keeta</h3>
+        </div>
+        <div class="plataformasForm">
+          <label>
+            iFood
+            <input id="inputIfood" type="number" placeholder="Digite valor">
+          </label>
+          <button onclick="salvarIfood()">Salvar iFood</button>
+          <p id="lucroIfood">R$ 0,00</p>
 
-      <div class="card">
-        <h3>Vendas iFood</h3>
-        <input id="inputIfood" type="number" placeholder="Digite valor">
-        <button onclick="salvarIfood()">Salvar</button>
-        <p id="lucroIfood">R$0</p>
-      </div>
-
-      <div class="card">
-        <h3>Vendas Keeta</h3>
-        <input id="inputKeeta" type="number" placeholder="Digite valor">
-        <button onclick="salvarKeeta()">Salvar</button>
-        <p id="lucroKeeta">R$0</p>
-      </div>
-    </section>
-
-    <section class="graficos">
-      <div class="grafico">
-        <h3>Vendas por Dia</h3>
-        <canvas id="graficoVendas"></canvas>
-      </div>
-
-      <div class="grafico">
-        <h3>Produtos Mais Vendidos</h3>
-        <canvas id="graficoProdutos"></canvas>
-      </div>
-
-      <div class="grafico">
-        <h3>PDV vs Delivery</h3>
-        <canvas id="graficoPlataforma"></canvas>
-      </div>
+          <label>
+            Keeta
+            <input id="inputKeeta" type="number" placeholder="Digite valor">
+          </label>
+          <button onclick="salvarKeeta()">Salvar Keeta</button>
+          <p id="lucroKeeta">R$ 0,00</p>
+        </div>
+      </article>
     </section>
   </main>
 </div>
@@ -94,223 +129,324 @@
 <script type="module">
 import { db } from "../js/firebaseConfig.js";
 import {
-collection,
-getDocs,
-addDoc
+  collection,
+  getDocs,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-let grafico1
-let grafico2
-let grafico3
+let graficoFluxo;
+let lucroIfood = 0;
+let lucroKeeta = 0;
 
-let lucroIfood = 0
-let lucroKeeta = 0
-
-async function carregar(){
-
-let total = 0
-let pedidos = 0
-
-let vendasDia = {}
-let produtos = {}
-
-let pdv = 0
-let delivery = 0
-
-let ranking = {}
-
-lucroIfood = 0
-lucroKeeta = 0
-
-const inicio = document.getElementById("inicio").value
-const fim = document.getElementById("fim").value
-
-
-/* 🔥 AGORA BUSCA EM VENDAS */
-const snapshot = await getDocs(collection(db,"vendas"))
+function formatCurrency(valor){
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 function parseData(input){
-  if(!input) return null
-
-  const [ano, mes, dia] = input.split("-")
-  return new Date(ano, mes - 1, dia)
+  if(!input) return null;
+  const [ano, mes, dia] = input.split("-");
+  return new Date(Number(ano), Number(mes) - 1, Number(dia));
 }
 
-const dataInicio = parseData(inicio)
-const dataFim = parseData(fim)
-
-snapshot.forEach(doc=>{
-
-const p = doc.data()
-
-if(!p) return
-
-let dataPedido
-
-if(p.criadoEm?.toDate){
-  dataPedido = p.criadoEm.toDate()
-} else {
-  dataPedido = new Date(p.criadoEm)
+function getDateFromField(valor){
+  if(!valor) return null;
+  if(valor?.toDate) return valor.toDate();
+  const d = new Date(valor);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/* FILTRO */
-
-if(dataInicio && dataPedido < dataInicio) return
-
-if(dataFim){
-  const fimDoDia = new Date(dataFim)
-  fimDoDia.setHours(23,59,59,999)
-
-  if(dataPedido > fimDoDia) return
+function isStatusAguardando(status){
+  return status === "aguardando_preparo" || status === "em_preparo";
 }
 
-const valor = Number(p.total || 0)
-
-total += valor
-pedidos++
-
-const nome = p.nomeUsuario || p.idUsuario || "Sem nome"
-
-ranking[nome] = (ranking[nome] || 0) + valor
-
-if(p.tipo === "pdv") pdv += valor
-else delivery += valor
-
-
-const dia = dataPedido.toLocaleDateString()
-
-vendasDia[dia] = (vendasDia[dia] || 0) + valor
-
-
-if(p.itens){
-
-p.itens.forEach(i=>{
-
-produtos[i.nome] = (produtos[i.nome] || 0) + Number(i.qtd || 0)
-
-})
-
+function getDayKey(data){
+  return `${String(data.getDate()).padStart(2,"0")}/${String(data.getMonth()+1).padStart(2,"0")}`;
 }
 
-})
+function getLast7DaysMap(){
+  const map = new Map();
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
 
+  for(let i=6; i>=0; i--){
+    const data = new Date(hoje);
+    data.setDate(hoje.getDate() - i);
 
-/* IFOOD / KEETA */
+    const diaSemana = data
+      .toLocaleDateString("pt-BR", { weekday:"short" })
+      .replace(".","")
+      .toUpperCase();
 
-const plataformas = await getDocs(collection(db,"plataformas"))
+    const chave = getDayKey(data);
+    map.set(chave, {
+      label: diaSemana,
+      receita: 0,
+      despesa: 0
+    });
+  }
 
-plataformas.forEach(doc=>{
-
-const p = doc.data()
-
-if(p.nome === "ifood") lucroIfood += Number(p.valor || 0)
-if(p.nome === "keeta") lucroKeeta += Number(p.valor || 0)
-
-})
-
-document.getElementById("totalVendido").innerText = "R$" + total.toFixed(2)
-document.getElementById("totalPedidos").innerText = pedidos
-document.getElementById("ticketMedio").innerText = "R$" + (pedidos ? total/pedidos : 0).toFixed(2)
-document.getElementById("lucroIfood").innerText = "R$" + lucroIfood.toFixed(2)
-document.getElementById("lucroKeeta").innerText = "R$" + lucroKeeta.toFixed(2)
-
-desenharGraficos(vendasDia, produtos, pdv, delivery)
-desenharRanking(ranking)
+  return map;
 }
 
-window.filtrar = carregar
+async function carregar(){
+  let total = 0;
+  let pedidos = 0;
+  let pdv = 0;
+  let delivery = 0;
+
+  let ranking = {};
+  lucroIfood = 0;
+  lucroKeeta = 0;
+
+  const inicio = document.getElementById("inicio").value;
+  const fim = document.getElementById("fim").value;
+  const dataInicio = parseData(inicio);
+  const dataFim = parseData(fim);
+
+  const [vendasSnap, retiradasSnap, plataformasSnap, pedidosSnap, produtosSnap] = await Promise.all([
+    getDocs(collection(db,"vendas")),
+    getDocs(collection(db,"retiradas")),
+    getDocs(collection(db,"plataformas")),
+    getDocs(collection(db,"pedidos")),
+    getDocs(collection(db,"produtos"))
+  ]);
+
+  const fluxo7Dias = getLast7DaysMap();
+
+  vendasSnap.forEach((docSnap)=>{
+    const venda = docSnap.data();
+    if(!venda) return;
+
+    const dataVenda = getDateFromField(venda.criadoEm) || getDateFromField(venda.data);
+    if(!dataVenda) return;
+
+    if(dataInicio && dataVenda < dataInicio) return;
+    if(dataFim){
+      const fimDoDia = new Date(dataFim);
+      fimDoDia.setHours(23,59,59,999);
+      if(dataVenda > fimDoDia) return;
+    }
+
+    const valor = Number(venda.total || 0);
+
+    total += valor;
+    pedidos += 1;
+
+    const nome = venda.nomeUsuario || venda.idUsuario || "Sem nome";
+    ranking[nome] = (ranking[nome] || 0) + valor;
+
+    if(venda.tipo === "pdv") pdv += valor;
+    else delivery += valor;
+
+    const chave = getDayKey(dataVenda);
+    if(fluxo7Dias.has(chave)){
+      fluxo7Dias.get(chave).receita += valor;
+    }
+  });
+
+  retiradasSnap.forEach((docSnap)=>{
+    const retirada = docSnap.data();
+    const dataRetirada = getDateFromField(retirada.data);
+    if(!dataRetirada) return;
+
+    const chave = getDayKey(dataRetirada);
+    if(fluxo7Dias.has(chave)){
+      fluxo7Dias.get(chave).despesa += Number(retirada.valor || 0);
+    }
+  });
+
+  plataformasSnap.forEach((docSnap)=>{
+    const plataforma = docSnap.data();
+    if(plataforma.nome === "ifood") lucroIfood += Number(plataforma.valor || 0);
+    if(plataforma.nome === "keeta") lucroKeeta += Number(plataforma.valor || 0);
+  });
+
+  const pedidosOrdenados = [];
+  let totalAguardando = 0;
+
+  pedidosSnap.forEach((docSnap)=>{
+    const pedido = docSnap.data();
+    const dataPedido = getDateFromField(pedido.criadoEm) || getDateFromField(pedido.data);
+
+    if(isStatusAguardando(pedido.status)) totalAguardando += 1;
+
+    pedidosOrdenados.push({
+      id: docSnap.id,
+      numero: pedido.numero || docSnap.id.slice(0,6),
+      cliente: pedido.cliente || "Cliente",
+      total: Number(pedido.total || 0),
+      status: pedido.status || "novo",
+      data: dataPedido || new Date(0)
+    });
+  });
+
+  let estoqueCritico = 0;
+  produtosSnap.forEach((docSnap)=>{
+    const produto = docSnap.data();
+    const estoque = Number(produto.estoque || 0);
+    const minimo = Number(produto.estoqueMinimo || 0);
+    if(estoque <= minimo) estoqueCritico += 1;
+  });
+
+  const comparativo = lucroIfood + lucroKeeta;
+
+  document.getElementById("totalVendido").innerText = formatCurrency(total);
+  document.getElementById("totalPedidos").innerText = pedidos;
+  document.getElementById("ticketMedio").innerText = formatCurrency(pedidos ? total / pedidos : 0);
+  document.getElementById("pedidosAguardando").innerText = totalAguardando;
+  document.getElementById("estoqueCritico").innerText = `${estoqueCritico} itens`;
+  document.getElementById("totalPdv").innerText = formatCurrency(pdv);
+  document.getElementById("totalDelivery").innerText = formatCurrency(delivery);
+  document.getElementById("lucroIfood").innerText = formatCurrency(lucroIfood);
+  document.getElementById("lucroKeeta").innerText = formatCurrency(lucroKeeta);
+  document.getElementById("comparativoVendas").innerText = `iFood + Keeta acumulado: ${formatCurrency(comparativo)}`;
+
+  desenharGraficoFluxo(fluxo7Dias);
+  desenharRanking(ranking);
+  desenharUltimosPedidos(pedidosOrdenados);
+}
+
+window.filtrar = carregar;
 
 function desenharRanking(ranking){
-const lista = Object.entries(ranking)
-.sort((a,b)=> b[1]-a[1])
-.slice(0,5)
+  const lista = Object.entries(ranking)
+    .sort((a,b)=> b[1] - a[1])
+    .slice(0,5);
 
-const div = document.getElementById("rankingCaixas")
-div.innerHTML = ""
+  const div = document.getElementById("rankingCaixas");
+  div.innerHTML = "";
 
-lista.forEach(([nome,valor])=>{
-const p = document.createElement("p")
-p.innerText = nome + " - R$" + valor.toFixed(2)
-div.appendChild(p)
-})
+  if(!lista.length){
+    div.innerHTML = "<p class='vazio'>Sem dados para o período.</p>";
+    return;
+  }
+
+  lista.forEach(([nome,valor], index)=>{
+    const item = document.createElement("div");
+    item.className = "rankingItem";
+    item.innerHTML = `<strong>#${index + 1} ${nome}</strong><span>${formatCurrency(valor)}</span>`;
+    div.appendChild(item);
+  });
 }
 
-function desenharGraficos(vendasDia, produtos, pdv, delivery){
-if(grafico1) grafico1.destroy()
-if(grafico2) grafico2.destroy()
-if(grafico3) grafico3.destroy()
-
-grafico1 = new Chart(document.getElementById("graficoVendas"),{
-type:"line",
-data:{
-labels:Object.keys(vendasDia),
-datasets:[{
-label:"Vendas",
-data:Object.values(vendasDia),
-borderColor:"#5e17eb",
-backgroundColor:"rgba(94,23,235,0.2)",
-fill:true
-}]
+function traduzirStatus(status){
+  const mapa = {
+    aguardando_preparo: "Aguardando",
+    em_preparo: "Preparando",
+    pronto: "Pronto",
+    entregue: "Entregue",
+    cancelado: "Cancelado"
+  };
+  return mapa[status] || status;
 }
-})
 
-grafico2 = new Chart(document.getElementById("graficoProdutos"),{
-type:"bar",
-data:{
-labels:Object.keys(produtos),
-datasets:[{
-label:"Qtd",
-data:Object.values(produtos),
-backgroundColor:"#5e17eb"
-}]
-}
-})
+function desenharUltimosPedidos(pedidos){
+  const div = document.getElementById("ultimosPedidos");
+  div.innerHTML = "";
 
-grafico3 = new Chart(document.getElementById("graficoPlataforma"),{
-type:"doughnut",
-data:{
-labels:["PDV","Delivery"],
-datasets:[{
-data:[pdv, delivery],
-backgroundColor:["#5e17eb","#00c853"]
-}]
+  if(!pedidos.length){
+    div.innerHTML = "<p class='vazio'>Nenhum pedido encontrado.</p>";
+    return;
+  }
+
+  pedidos
+    .sort((a,b)=> b.data - a.data)
+    .slice(0,5)
+    .forEach((pedido)=>{
+      const item = document.createElement("div");
+      item.className = "pedidoItem";
+      item.innerHTML = `
+        <div>
+          <strong>#${pedido.numero} • ${pedido.cliente}</strong>
+          <p>${formatCurrency(pedido.total)}</p>
+        </div>
+        <span class="status ${pedido.status}">${traduzirStatus(pedido.status)}</span>
+      `;
+      div.appendChild(item);
+    });
 }
-})
+
+function desenharGraficoFluxo(fluxo7Dias){
+  if(graficoFluxo) graficoFluxo.destroy();
+
+  const valores = Array.from(fluxo7Dias.values());
+
+  graficoFluxo = new Chart(document.getElementById("graficoFluxo"), {
+    type: "bar",
+    data: {
+      labels: valores.map((d)=> d.label),
+      datasets: [
+        {
+          label: "Receita",
+          data: valores.map((d)=> d.receita),
+          backgroundColor: "rgba(16, 185, 129, 0.9)",
+          borderRadius: 8
+        },
+        {
+          label: "Despesas",
+          data: valores.map((d)=> d.despesa),
+          backgroundColor: "rgba(59, 130, 246, 0.35)",
+          borderRadius: 8
+        }
+      ]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "bottom"
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value)=> `R$ ${value}`
+          }
+        }
+      }
+    }
+  });
 }
 
 window.salvarIfood = async function(){
-const v = Number(document.getElementById("inputIfood").value || 0)
-if(!v) return
-await addDoc(collection(db,"plataformas"),{nome:"ifood",valor:v})
-carregar()
-}
+  const v = Number(document.getElementById("inputIfood").value || 0);
+  if(!v) return;
+  await addDoc(collection(db,"plataformas"), { nome:"ifood", valor:v });
+  document.getElementById("inputIfood").value = "";
+  carregar();
+};
 
 window.salvarKeeta = async function(){
-const v = Number(document.getElementById("inputKeeta").value || 0)
-if(!v) return
-await addDoc(collection(db,"plataformas"),{nome:"keeta",valor:v})
-carregar()
-}
+  const v = Number(document.getElementById("inputKeeta").value || 0);
+  if(!v) return;
+  await addDoc(collection(db,"plataformas"), { nome:"keeta", valor:v });
+  document.getElementById("inputKeeta").value = "";
+  carregar();
+};
 
 window.baixarExcel = function(){
-const wb = XLSX.utils.book_new()
-const ws = XLSX.utils.json_to_sheet([
-{campo:"Total Vendido", valor:document.getElementById("totalVendido").innerText},
-{campo:"Pedidos", valor:document.getElementById("totalPedidos").innerText},
-{campo:"Ticket Médio", valor:document.getElementById("ticketMedio").innerText},
-{campo:"Lucro iFood", valor:document.getElementById("lucroIfood").innerText},
-{campo:"Lucro Keeta", valor:document.getElementById("lucroKeeta").innerText}
-])
-XLSX.utils.book_append_sheet(wb,ws,"Relatorio")
-XLSX.writeFile(wb,"relatorio_dashboard.xlsx")
-}
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet([
+    { campo:"Total Vendido", valor:document.getElementById("totalVendido").innerText },
+    { campo:"Pedidos", valor:document.getElementById("totalPedidos").innerText },
+    { campo:"Ticket Médio", valor:document.getElementById("ticketMedio").innerText },
+    { campo:"Pedidos Aguardando", valor:document.getElementById("pedidosAguardando").innerText },
+    { campo:"Estoque Crítico", valor:document.getElementById("estoqueCritico").innerText },
+    { campo:"Lucro iFood", valor:document.getElementById("lucroIfood").innerText },
+    { campo:"Lucro Keeta", valor:document.getElementById("lucroKeeta").innerText }
+  ]);
+  XLSX.utils.book_append_sheet(wb, ws, "Relatorio");
+  XLSX.writeFile(wb, "relatorio_dashboard.xlsx");
+};
 
 document.getElementById("logout").onclick = ()=>{
-localStorage.removeItem("usuarioLogado")
-window.location.href = "login.html"
-}
+  localStorage.removeItem("usuarioLogado");
+  window.location.href = "login.html";
+};
 
-carregar()
+carregar();
 </script>
 
 <script src="../js/sessao.js"></script>
