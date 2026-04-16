@@ -2,98 +2,128 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Produtos</title>
-
+<link rel="stylesheet" href="../css/dashboard.css">
 <link rel="stylesheet" href="../css/produtos.css">
-
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+<link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
 </head>
-
 <body>
+<div class="layoutAdmin">
+  <aside class="sidebarAdmin">
+    <h2>Painel</h2>
+    <nav>
+      <a href="dashboard.html"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="pdv.html"><i class="fa-solid fa-cash-register"></i> PDV</a>
+      <a href="produtos.html" class="ativo"><i class="fa-solid fa-box"></i> Produtos</a>
+      <a href="entregador.html"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
+    </nav>
+    <button id="logout" class="sidebarAction sair">Sair</button>
+  </aside>
 
-<div class="topBar">
+  <main class="conteudoAdmin">
+    <header class="topoProdutos">
+      <div>
+        <h1>Estoque</h1>
+        <p>Gerencie seus produtos e quantidades mantendo o padrão do dashboard.</p>
+      </div>
+      <button id="abrirModal" class="btnPrimario">
+        <i class="fa-solid fa-plus"></i>
+        Adicionar produto
+      </button>
+    </header>
 
-<div class="logoArea">
-<img src="../img/logo-acai.png">
-<span>Açaí do Rapha</span>
+    <section class="toolbarProdutos">
+      <div class="busca">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="buscarProduto" placeholder="Buscar por nome ou categoria">
+      </div>
+
+      <div class="filtrosStatus">
+        <button class="filtroBtn ativo" data-filter="all">Todos</button>
+        <button class="filtroBtn" data-filter="inStock">Em estoque</button>
+        <button class="filtroBtn" data-filter="outOfStock">Esgotado</button>
+      </div>
+    </section>
+
+    <section class="tabelaWrapper" id="tabelaWrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Preço</th>
+            <th>Custo</th>
+            <th>Quantidade</th>
+            <th>Mínimo</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="listaProdutos"></tbody>
+      </table>
+    </section>
+
+    <section class="estadoVazio" id="estadoVazio" hidden>
+      <i class="fa-solid fa-box-open"></i>
+      <p>Nenhum registro encontrado.</p>
+    </section>
+  </main>
 </div>
 
-<div class="menuArea">
-<a href="dashboard.html"><button>Dashboard</button></a>
-<a href="pdv.html"><button>PDV</button></a>
-<a href="produtos.html"><button>Produtos</button></a>
-<a href="entregas.html"><button>Entregas</button></a>
+<div id="modal" class="modal" aria-hidden="true">
+  <div class="modalBox">
+    <h3 id="tituloModal">Novo Produto</h3>
 
-<span id="userName"></span>
-</div>
+    <label>Nome</label>
+    <input id="nomeProduto" placeholder="Nome do produto">
 
-</div>
+    <label>Descrição</label>
+    <textarea id="descricaoProduto" rows="2" placeholder="Descrição curta do produto"></textarea>
 
-<div class="container">
+    <label>Categoria</label>
+    <input id="categoriaProduto" placeholder="Ex: Lanches">
 
-<h1>Produtos</h1>
+    <div class="grid2">
+      <div>
+        <label>Preço (R$)</label>
+        <input id="precoProduto" inputmode="decimal" placeholder="R$ 0,00">
+      </div>
+      <div>
+        <label>Custo (R$)</label>
+        <input id="custoProduto" inputmode="decimal" placeholder="R$ 0,00">
+      </div>
+    </div>
 
-<!-- BUSCA -->
-<div class="busca">
-<i class="fa-solid fa-magnifying-glass"></i>
-<input id="buscarProduto" placeholder="Buscar produto...">
-</div>
+    <div class="grid2">
+      <div>
+        <label>Quantidade</label>
+        <input id="estoqueProduto" type="number" min="0" placeholder="0">
+      </div>
+      <div>
+        <label>Qtd. mínima</label>
+        <input id="estoqueMinimo" type="number" min="0" placeholder="0">
+      </div>
+    </div>
 
-<button id="abrirModal">+ Novo Produto</button>
+    <label>Promoção (opcional)</label>
+    <input id="precoPromo" inputmode="decimal" placeholder="R$ 0,00">
 
-<div id="listaProdutos"></div>
+    <label>Código de barras (opcional)</label>
+    <input id="numeroCodigoBarras" placeholder="789...">
 
-</div>
+    <label>Imagem (opcional)</label>
+    <input type="file" id="fotoProduto" accept="image/*">
+    <img id="previewImagem" alt="Pré-visualização" hidden>
 
-<!-- MODAL -->
-<div id="modal">
-<div class="modalBox">
-
-<h3 id="tituloModal">Novo Produto</h3>
-
-<label><i class="fa-solid fa-box"></i> Nome</label>
-<input id="nomeProduto">
-
-<label><i class="fa-solid fa-layer-group"></i> Categoria</label>
-<input id="categoriaProduto">
-
-<label><i class="fa-solid fa-money-bill"></i> Preço</label>
-<input id="precoProduto">
-
-<label><i class="fa-solid fa-percent"></i> Promoção (opcional)</label>
-<input id="precoPromo">
-
-<label><i class="fa-solid fa-boxes-stacked"></i> Possui estoque?</label>
-<select id="temEstoque">
-<option value="sim">Sim</option>
-<option value="nao">Não</option>
-</select>
-
-<input id="estoqueProduto" placeholder="Quantidade em estoque">
-
-<label><i class="fa-solid fa-barcode"></i> Código de barras?</label>
-<select id="codigoBarras">
-<option value="nao">Não</option>
-<option value="sim">Sim</option>
-</select>
-
-<input id="numeroCodigoBarras" placeholder="Código de barras" style="display:none;">
-
-<input type="file" id="fotoProduto">
-
-<img id="previewImagem" style="width:100%;margin-top:10px;display:none;border-radius:8px;">
-
-<div class="modalBtns">
-<button id="salvarProduto">Salvar</button>
-<button id="fecharModal">Cancelar</button>
-</div>
-
-</div>
+    <div class="modalBtns">
+      <button id="salvarProduto" class="btnPrimario">Salvar</button>
+      <button id="fecharModal" class="btnSecundario">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="../js/produtos.js"></script>
 <script type="module" src="../js/auth.js"></script>
-
 </body>
 </html>
