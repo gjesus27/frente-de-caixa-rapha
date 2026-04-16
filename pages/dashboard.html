@@ -1,133 +1,98 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
-
 <meta charset="UTF-8">
 <title>Dashboard</title>
-
 <link rel="stylesheet" href="../css/dashboard.css">
-
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
-
 </head>
-
 <body>
+<div class="layoutAdmin">
+  <aside class="sidebarAdmin">
+    <h2>Painel</h2>
+    <nav>
+      <a href="dashboard.html" class="ativo"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="pdv.html"><i class="fa-solid fa-cash-register"></i> PDV</a>
+      <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
+      <a href="entregador.html"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
+    </nav>
+    <button onclick="baixarExcel()" class="sidebarAction">
+      <i class="fa-solid fa-file-excel"></i> Relatório Excel
+    </button>
+    <button id="logout" class="sidebarAction sair">Sair</button>
+  </aside>
 
-<header>
+  <main class="conteudoAdmin">
+    <header>
+      <h1>Painel Administrativo</h1>
+    </header>
 
-<h1>Painel Administrativo</h1>
+    <section class="filtros">
+      <input type="date" id="inicio">
+      <input type="date" id="fim">
+      <button onclick="filtrar()">Filtrar</button>
+    </section>
 
-<nav>
+    <section class="cards">
+      <div class="card">
+        <h3>Total Vendido</h3>
+        <p id="totalVendido">R$0</p>
+      </div>
 
-<a href="pdv.html"><button>PDV</button></a>
-<a href="produtos.html"><button>Produtos</button></a>
-<a href="entregador.html"><button>Entregas</button></a>
+      <div class="card">
+        <h3>Pedidos</h3>
+        <p id="totalPedidos">0</p>
+      </div>
 
-<button onclick="baixarExcel()">
-<i class="fa-solid fa-file-excel"></i>
-Relatório Excel
-</button>
+      <div class="card">
+        <h3>Ticket Médio</h3>
+        <p id="ticketMedio">R$0</p>
+      </div>
 
-<button id="logout">Sair</button>
+      <div class="card">
+        <h3>Ranking de Caixas</h3>
+        <div id="rankingCaixas"></div>
+      </div>
 
-</nav>
+      <div class="card">
+        <h3>Vendas iFood</h3>
+        <input id="inputIfood" type="number" placeholder="Digite valor">
+        <button onclick="salvarIfood()">Salvar</button>
+        <p id="lucroIfood">R$0</p>
+      </div>
 
-</header>
+      <div class="card">
+        <h3>Vendas Keeta</h3>
+        <input id="inputKeeta" type="number" placeholder="Digite valor">
+        <button onclick="salvarKeeta()">Salvar</button>
+        <p id="lucroKeeta">R$0</p>
+      </div>
+    </section>
 
+    <section class="graficos">
+      <div class="grafico">
+        <h3>Vendas por Dia</h3>
+        <canvas id="graficoVendas"></canvas>
+      </div>
 
-<section class="filtros">
+      <div class="grafico">
+        <h3>Produtos Mais Vendidos</h3>
+        <canvas id="graficoProdutos"></canvas>
+      </div>
 
-<input type="date" id="inicio">
-<input type="date" id="fim">
-
-<button onclick="filtrar()">Filtrar</button>
-
-</section>
-
-
-
-<section class="cards">
-
-<div class="card">
-<h3>Total Vendido</h3>
-<p id="totalVendido">R$0</p>
+      <div class="grafico">
+        <h3>PDV vs Delivery</h3>
+        <canvas id="graficoPlataforma"></canvas>
+      </div>
+    </section>
+  </main>
 </div>
-
-<div class="card">
-<h3>Pedidos</h3>
-<p id="totalPedidos">0</p>
-</div>
-
-<div class="card">
-<h3>Ticket Médio</h3>
-<p id="ticketMedio">R$0</p>
-</div>
-
-<div class="card">
-<h3>Ranking de Caixas</h3>
-<div id="rankingCaixas"></div>
-</div>
-
-<div class="card">
-<h3>Vendas iFood</h3>
-
-<input id="inputIfood" type="number" placeholder="Digite valor">
-
-<button onclick="salvarIfood()">Salvar</button>
-
-<p id="lucroIfood">R$0</p>
-
-</div>
-
-<div class="card">
-
-<h3>Vendas Keeta</h3>
-
-<input id="inputKeeta" type="number" placeholder="Digite valor">
-
-<button onclick="salvarKeeta()">Salvar</button>
-
-<p id="lucroKeeta">R$0</p>
-
-</div>
-
-</section>
-
-
-
-<section class="graficos">
-
-<div class="grafico">
-<h3>Vendas por Dia</h3>
-<canvas id="graficoVendas"></canvas>
-</div>
-
-<div class="grafico">
-<h3>Produtos Mais Vendidos</h3>
-<canvas id="graficoProdutos"></canvas>
-</div>
-
-<div class="grafico">
-<h3>PDV vs Delivery</h3>
-<canvas id="graficoPlataforma"></canvas>
-</div>
-
-</section>
-
-
-
-<!-- TROQUE APENAS O SCRIPT PELO DE BAIXO -->
 
 <script type="module">
-
 import { db } from "../js/firebaseConfig.js";
-
 import {
 collection,
 getDocs,
@@ -238,69 +203,42 @@ plataformas.forEach(doc=>{
 
 const p = doc.data()
 
-if(p.tipo === "ifood") lucroIfood += Number(p.valor || 0)
-if(p.tipo === "keeta") lucroKeeta += Number(p.valor || 0)
+if(p.nome === "ifood") lucroIfood += Number(p.valor || 0)
+if(p.nome === "keeta") lucroKeeta += Number(p.valor || 0)
 
 })
 
-
-/* UI */
-
-document.getElementById("totalVendido").innerText = "R$ "+total.toFixed(2)
+document.getElementById("totalVendido").innerText = "R$" + total.toFixed(2)
 document.getElementById("totalPedidos").innerText = pedidos
+document.getElementById("ticketMedio").innerText = "R$" + (pedidos ? total/pedidos : 0).toFixed(2)
+document.getElementById("lucroIfood").innerText = "R$" + lucroIfood.toFixed(2)
+document.getElementById("lucroKeeta").innerText = "R$" + lucroKeeta.toFixed(2)
 
-document.getElementById("lucroIfood").innerText = "R$ "+lucroIfood.toFixed(2)
-document.getElementById("lucroKeeta").innerText = "R$ "+lucroKeeta.toFixed(2)
-
-
-/* TICKET MÉDIO */
-
-let ticket = pedidos ? total/pedidos : 0
-
-document.getElementById("ticketMedio").innerText =
-"R$ "+ticket.toFixed(2)
-
-const rankingOrdenado = Object.entries(ranking)
-.sort((a,b)=> b[1] - a[1])
-
-const divRanking = document.getElementById("rankingCaixas")
-
-divRanking.innerHTML = ""
-
-rankingOrdenado.forEach((item, index)=>{
-
-const nome = item[0]
-const valor = item[1]
-
-let medalha = ""
-
-if(index === 0) medalha = "🥇"
-else if(index === 1) medalha = "🥈"
-else if(index === 2) medalha = "🥉"
-
-divRanking.innerHTML += `
-  <p>
-    ${medalha} ${nome} <br>
-    <strong>R$ ${valor.toFixed(2)}</strong>
-  </p>
-`
-})
-
-criarGraficos(vendasDia,produtos,pdv,delivery)
-
+desenharGraficos(vendasDia, produtos, pdv, delivery)
+desenharRanking(ranking)
 }
 
-carregar()
+window.filtrar = carregar
 
+function desenharRanking(ranking){
+const lista = Object.entries(ranking)
+.sort((a,b)=> b[1]-a[1])
+.slice(0,5)
 
-/* GRAFICOS */
+const div = document.getElementById("rankingCaixas")
+div.innerHTML = ""
 
-function criarGraficos(vendasDia,produtos,pdv,delivery){
+lista.forEach(([nome,valor])=>{
+const p = document.createElement("p")
+p.innerText = nome + " - R$" + valor.toFixed(2)
+div.appendChild(p)
+})
+}
 
+function desenharGraficos(vendasDia, produtos, pdv, delivery){
 if(grafico1) grafico1.destroy()
 if(grafico2) grafico2.destroy()
 if(grafico3) grafico3.destroy()
-
 
 grafico1 = new Chart(document.getElementById("graficoVendas"),{
 type:"line",
@@ -309,111 +247,72 @@ labels:Object.keys(vendasDia),
 datasets:[{
 label:"Vendas",
 data:Object.values(vendasDia),
-borderWidth:3,
-tension:0.4
+borderColor:"#5e17eb",
+backgroundColor:"rgba(94,23,235,0.2)",
+fill:true
 }]
 }
 })
-
 
 grafico2 = new Chart(document.getElementById("graficoProdutos"),{
 type:"bar",
 data:{
 labels:Object.keys(produtos),
 datasets:[{
-label:"Quantidade",
-data:Object.values(produtos)
+label:"Qtd",
+data:Object.values(produtos),
+backgroundColor:"#5e17eb"
 }]
 }
 })
-
 
 grafico3 = new Chart(document.getElementById("graficoPlataforma"),{
 type:"doughnut",
 data:{
 labels:["PDV","Delivery"],
 datasets:[{
-data:[pdv,delivery]
+data:[pdv, delivery],
+backgroundColor:["#5e17eb","#00c853"]
 }]
 }
 })
-
 }
-
-
-/* FILTRO */
-
-window.filtrar = function(){
-carregar()
-}
-
-
-/* SALVAR IFOOD */
 
 window.salvarIfood = async function(){
-
-const valor = Number(document.getElementById("inputIfood").value)
-
-if(!valor) return alert("Digite um valor")
-
-await addDoc(collection(db,"plataformas"),{
-tipo:"ifood",
-valor:valor,
-data:new Date()
-})
-
-alert("Salvo")
+const v = Number(document.getElementById("inputIfood").value || 0)
+if(!v) return
+await addDoc(collection(db,"plataformas"),{nome:"ifood",valor:v})
 carregar()
-
 }
-
-
-/* SALVAR KEETA */
 
 window.salvarKeeta = async function(){
-
-const valor = Number(document.getElementById("inputKeeta").value)
-
-if(!valor) return alert("Digite um valor")
-
-await addDoc(collection(db,"plataformas"),{
-tipo:"keeta",
-valor:valor,
-data:new Date()
-})
-
-alert("Salvo")
+const v = Number(document.getElementById("inputKeeta").value || 0)
+if(!v) return
+await addDoc(collection(db,"plataformas"),{nome:"keeta",valor:v})
 carregar()
-
 }
-
-
-/* EXCEL */
 
 window.baixarExcel = function(){
-
-const dados = [{
-total:document.getElementById("totalVendido").innerText,
-pedidos:document.getElementById("totalPedidos").innerText,
-ticket:document.getElementById("ticketMedio").innerText,
-previsao:document.getElementById("previsaoMes").innerText,
-ifood:document.getElementById("lucroIfood").innerText,
-keeta:document.getElementById("lucroKeeta").innerText
-}]
-
-const planilha = XLSX.utils.json_to_sheet(dados)
-
-const arquivo = XLSX.utils.book_new()
-
-XLSX.utils.book_append_sheet(arquivo,planilha,"Dashboard")
-
-XLSX.writeFile(arquivo,"relatorio_dashboard.xlsx")
-
+const wb = XLSX.utils.book_new()
+const ws = XLSX.utils.json_to_sheet([
+{campo:"Total Vendido", valor:document.getElementById("totalVendido").innerText},
+{campo:"Pedidos", valor:document.getElementById("totalPedidos").innerText},
+{campo:"Ticket Médio", valor:document.getElementById("ticketMedio").innerText},
+{campo:"Lucro iFood", valor:document.getElementById("lucroIfood").innerText},
+{campo:"Lucro Keeta", valor:document.getElementById("lucroKeeta").innerText}
+])
+XLSX.utils.book_append_sheet(wb,ws,"Relatorio")
+XLSX.writeFile(wb,"relatorio_dashboard.xlsx")
 }
 
+document.getElementById("logout").onclick = ()=>{
+localStorage.removeItem("usuarioLogado")
+window.location.href = "login.html"
+}
+
+carregar()
 </script>
 
-<script type="module" src="../js/auth.js"></script>
-
+<script src="../js/sessao.js"></script>
 </body>
 </html>
