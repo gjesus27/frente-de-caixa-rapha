@@ -25,6 +25,8 @@ if(!usuario.permissoes?.includes("admin")){
 
 let caixaAtual = null;
 let vendasDoCaixa = [];
+let fechamentoPendente = null;
+let historicoPorId = new Map();
 
 function money(v){
   return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -52,6 +54,7 @@ async function carregarCaixaAtual(){
     vendasDoCaixa = [];
   }
 
+  fechamentoPendente = null;
   renderStatus();
   renderResumoPagamentos();
 }
@@ -82,6 +85,23 @@ function totalPorPagamento(vendas){
   return totais;
 }
 
+function templateDetalheFechamento(totais){
+  const totalVendido = Object.values(totais).reduce((s, v)=>s + v, 0);
+  return `
+    <div class="blocoDetalhes">
+      <h4>Detalhamento para fechamento</h4>
+      <div class="infoLinha"><span>Dinheiro</span><strong>${money(totais.dinheiro)}</strong></div>
+      <div class="infoLinha"><span>PIX</span><strong>${money(totais.pix)}</strong></div>
+      <div class="infoLinha"><span>Débito</span><strong>${money(totais.debito)}</strong></div>
+      <div class="infoLinha"><span>Crédito</span><strong>${money(totais.credito)}</strong></div>
+      <div class="infoLinha"><span>Ticket</span><strong>${money(totais.ticket)}</strong></div>
+      <div class="infoLinha"><span>Cashback</span><strong>${money(totais.cashback)}</strong></div>
+      <div class="infoLinha"><span>Total vendido</span><strong>${money(totalVendido)}</strong></div>
+      <p class="textoAjuda">Confira os valores por forma de pagamento antes de concluir o fechamento.</p>
+    </div>
+  `;
+}
+
 function renderStatus(){
   if(!caixaAtual){
     statusCaixa.innerHTML = `
@@ -99,6 +119,7 @@ function renderStatus(){
   }
 
   const saldo = Number(caixaAtual.saldoAtual || 0);
+  const detalheFechamentoHtml = fechamentoPendente ? templateDetalheFechamento(fechamentoPendente.totais) : "";
 
   statusCaixa.innerHTML = `
     <h3>Status do Caixa</h3>
@@ -110,12 +131,21 @@ function renderStatus(){
     <input id="motivoSangria" class="inputValor" placeholder="Motivo da sangria">
     <div class="grupoBotoes">
       <button class="btnSecundario" id="btnSangria">Registrar Sangria</button>
-      <button class="btnPerigo" id="btnFechar">Fechar Caixa</button>
+      <button class="btnPerigo" id="btnPrepararFechamento">Fechar Caixa</button>
     </div>
+    ${detalheFechamentoHtml}
+    ${fechamentoPendente ? '<div class="grupoBotoes"><button class="btnPerigo" id="btnConfirmarFechamento">Confirmar Fechamento</button><button class="btnSecundario" id="btnCancelarPrevia">Revisar depois</button></div>' : ""}
   `;
 
   document.getElementById("btnSangria").onclick = registrarSangria;
-  document.getElementById("btnFechar").onclick = fecharCaixa;
+  document.getElementById("btnPrepararFechamento").onclick = prepararFechamento;
+  if(fechamentoPendente){
+    document.getElementById("btnConfirmarFechamento").onclick = confirmarFechamento;
+    document.getElementById("btnCancelarPrevia").onclick = ()=>{
+      fechamentoPendente = null;
+      renderStatus();
+    };
+  }
 }
 
 function renderResumoPagamentos(){
@@ -177,17 +207,32 @@ async function registrarSangria(){
   await carregarCaixaAtual();
 }
 
-async function fecharCaixa(){
+function prepararFechamento(){
   if(!caixaAtual) return;
 
   const totais = totalPorPagamento(vendasDoCaixa);
   const totalVendido = Object.values(totais).reduce((s, v)=>s + v, 0);
 
+  fechamentoPendente = {
+    totais,
+    totalVendido,
+    saldoFinal: Number(caixaAtual.saldoAtual || 0)
+  };
+
+  renderStatus();
+}
+
+async function confirmarFechamento(){
+  if(!caixaAtual || !fechamentoPendente) return;
+
   await updateDoc(doc(db, "caixa", caixaAtual.id), {
     aberto: false,
     dataFechamento: new Date(),
-    resumoPagamentos: totais,
-    totalVendido
+    resumoPagamentos: fechamentoPendente.totais,
+    totalVendido: fechamentoPendente.totalVendido,
+    fechamentoCancelado: false,
+    editadoEm: null,
+    editadoPor: null
   });
 
   alert("Caixa fechado com sucesso.");
@@ -202,6 +247,58 @@ function formatData(data){
   return new Date(data).toLocaleString("pt-BR");
 }
 
+async function editarFechamento(caixaId){
+  const caixa = historicoPorId.get(caixaId);
+  if(!caixa) return;
+
+  const resumoAtual = caixa.resumoPagamentos || {};
+  const dinheiro = Number(prompt("Editar Dinheiro:", Number(resumoAtual.dinheiro || 0).toFixed(2)));
+  const pix = Number(prompt("Editar PIX:", Number(resumoAtual.pix || 0).toFixed(2)));
+  const debito = Number(prompt("Editar Débito:", Number(resumoAtual.debito || 0).toFixed(2)));
+  const credito = Number(prompt("Editar Crédito:", Number(resumoAtual.credito || 0).toFixed(2)));
+  const ticket = Number(prompt("Editar Ticket:", Number(resumoAtual.ticket || 0).toFixed(2)));
+  const cashback = Number(prompt("Editar Cashback:", Number(resumoAtual.cashback || 0).toFixed(2)));
+
+  if([dinheiro, pix, debito, credito, ticket, cashback].some((v)=>Number.isNaN(v) || v < 0)){
+    alert("Edição cancelada: informe apenas valores válidos.");
+    return;
+  }
+
+  const resumoPagamentos = { dinheiro, pix, debito, credito, ticket, cashback };
+  const totalVendido = Object.values(resumoPagamentos).reduce((s, v)=>s + Number(v || 0), 0);
+
+  await updateDoc(doc(db, "caixa", caixaId), {
+    resumoPagamentos,
+    totalVendido,
+    editadoPor: usuario.nome,
+    editadoEm: new Date()
+  });
+
+  alert("Fechamento editado com sucesso.");
+  await carregarHistorico();
+}
+
+async function cancelarFechamento(caixaId){
+  const motivo = prompt("Motivo do cancelamento do fechamento:");
+  if(!motivo || !motivo.trim()){
+    alert("Cancelamento precisa de um motivo.");
+    return;
+  }
+
+  const ok = confirm("Tem certeza que deseja cancelar este fechamento? Essa ação marca o fechamento como cancelado no histórico.");
+  if(!ok) return;
+
+  await updateDoc(doc(db, "caixa", caixaId), {
+    fechamentoCancelado: true,
+    canceladoEm: new Date(),
+    canceladoPor: usuario.nome,
+    motivoCancelamento: motivo.trim()
+  });
+
+  alert("Fechamento cancelado com sucesso.");
+  await carregarHistorico();
+}
+
 async function carregarHistorico(){
   if(!usuario.permissoes?.includes("admin")){
     document.getElementById("historicoFechamentos").style.display = "none";
@@ -210,9 +307,13 @@ async function carregarHistorico(){
 
   const snap = await getDocs(query(collection(db, "caixa"), orderBy("dataFechamento", "desc"), limit(20)));
   const registros = [];
+  historicoPorId = new Map();
   snap.forEach((d)=>{
     const item = { id: d.id, ...d.data() };
-    if(item.aberto === false) registros.push(item);
+    if(item.aberto === false){
+      registros.push(item);
+      historicoPorId.set(item.id, item);
+    }
   });
 
   if(!registros.length){
@@ -222,17 +323,32 @@ async function carregarHistorico(){
 
   listaFechamentos.innerHTML = registros.map((f)=>{
     const resumo = f.resumoPagamentos || {};
+    const cancelado = Boolean(f.fechamentoCancelado);
     return `
-      <article class="fechamentoCard">
+      <article class="fechamentoCard ${cancelado ? "cancelado" : ""}">
         <p><strong>Caixa:</strong> ${f.id}</p>
         <p><strong>Operador:</strong> ${f.usuario || "-"}</p>
         <p><strong>Fechamento:</strong> ${formatData(f.dataFechamento)}</p>
         <p><strong>Total vendido:</strong> ${money(f.totalVendido || 0)}</p>
         <p><strong>Dinheiro:</strong> ${money(resumo.dinheiro || 0)} • <strong>PIX:</strong> ${money(resumo.pix || 0)} • <strong>Débito:</strong> ${money(resumo.debito || 0)}</p>
         <p><strong>Crédito:</strong> ${money(resumo.credito || 0)} • <strong>Ticket:</strong> ${money(resumo.ticket || 0)} • <strong>Cashback:</strong> ${money(resumo.cashback || 0)}</p>
+        ${f.editadoEm ? `<p class="textoAjuda">Editado por ${f.editadoPor || "-"} em ${formatData(f.editadoEm)}</p>` : ""}
+        ${cancelado ? `<p class="textoCancelado"><strong>Cancelado por:</strong> ${f.canceladoPor || "-"} em ${formatData(f.canceladoEm)}<br><strong>Motivo:</strong> ${f.motivoCancelamento || "-"}</p>` : ""}
+        <div class="grupoBotoes grupoBotoesHistorico">
+          <button class="btnSecundario" data-editar="${f.id}" ${cancelado ? "disabled" : ""}>Editar</button>
+          <button class="btnPerigo" data-cancelar="${f.id}" ${cancelado ? "disabled" : ""}>Cancelar</button>
+        </div>
       </article>
     `;
   }).join("");
+
+  listaFechamentos.querySelectorAll("[data-editar]").forEach((btn)=>{
+    btn.onclick = ()=>editarFechamento(btn.dataset.editar);
+  });
+
+  listaFechamentos.querySelectorAll("[data-cancelar]").forEach((btn)=>{
+    btn.onclick = ()=>cancelarFechamento(btn.dataset.cancelar);
+  });
 }
 
 await carregarCaixaAtual();
