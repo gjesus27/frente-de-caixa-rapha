@@ -32,20 +32,30 @@ function money(v){
   return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function toMillis(data){
+  if(!data) return 0;
+  if(typeof data?.toMillis === "function") return data.toMillis();
+  if(typeof data?.seconds === "number") return data.seconds * 1000;
+  const parsed = new Date(data).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 async function carregarCaixaAtual(){
   const q = query(
     collection(db, "caixa"),
-    where("usuario", "==", usuario.nome),
-    where("aberto", "==", true),
-    orderBy("dataAbertura", "desc"),
-    limit(1)
+    where("aberto", "==", true)
   );
 
   const snap = await getDocs(q);
   caixaAtual = null;
 
   snap.forEach((d)=>{
-    caixaAtual = { id: d.id, ...d.data() };
+    const item = { id: d.id, ...d.data() };
+    if(item.usuario !== usuario.nome) return;
+
+    if(!caixaAtual || toMillis(item.dataAbertura) > toMillis(caixaAtual.dataAbertura)){
+      caixaAtual = item;
+    }
   });
 
   if(caixaAtual){
@@ -351,5 +361,15 @@ async function carregarHistorico(){
   });
 }
 
-await carregarCaixaAtual();
-await carregarHistorico();
+try{
+  await carregarCaixaAtual();
+  await carregarHistorico();
+}catch(error){
+  console.error("Erro ao carregar módulo de caixa", error);
+  const msg = error?.message || "erro inesperado";
+  statusCaixa.innerHTML = `
+    <h3>Status do Caixa</h3>
+    <p class="textoAjuda">Não foi possível carregar o caixa agora.</p>
+    <p class="textoAjuda">Detalhe: ${msg}</p>
+  `;
+}
