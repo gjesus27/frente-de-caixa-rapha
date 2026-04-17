@@ -1,0 +1,56 @@
+.topoCaixa h1{margin:0;font-size:32px;color:#1e1b4b;}
+.topoCaixa p{margin:6px 0 20px;color:#6b7280;}
+
+.gridCaixa{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:16px;
+  margin-bottom:16px;
+}
+
+.painelCard h3{margin-top:0;color:#1e1b4b;}
+
+.infoLinha{
+  display:flex;
+  justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid #eef2ff;
+}
+
+.infoLinha strong{color:#111827;}
+
+.grupoBotoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+.grupoBotoes button{
+  border:none;
+  border-radius:10px;
+  padding:10px 12px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.btnPrimario{background:#5e17eb;color:#fff;}
+.btnPerigo{background:#ef4444;color:#fff;}
+.btnSecundario{background:#e5e7eb;color:#111827;}
+
+.inputValor{
+  width:100%;
+  margin-top:10px;
+  padding:10px 12px;
+  border:1px solid #d1d5db;
+  border-radius:10px;
+}
+
+#listaFechamentos{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+.fechamentoCard{border:1px solid #e5e7eb;background:#f8fafc;border-radius:12px;padding:12px;}
+.fechamentoCard p{margin:4px 0;color:#374151;}
+
+.badgeAberto,.badgeFechado{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+.badgeAberto{background:#dcfce7;color:#166534;}
+.badgeFechado{background:#fee2e2;color:#991b1b;}

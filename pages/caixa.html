@@ -1,51 +1,55 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="pt-br">
 <head>
-
-<meta charset="UTF-8">
-<title>Controle de Caixa</title>
-
-<link rel="stylesheet" href="../css/pdv.css">
-<link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caixa</title>
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/caixa.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
 </head>
-
 <body>
+  <div class="layoutAdmin">
+    <aside class="sidebarAdmin">
+      <h2>Painel</h2>
+      <p class="sidebarUser" data-usuario-logado></p>
+      <nav>
+        <a href="dashboard.html" data-only-admin><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="pdv.html"><i class="fa-solid fa-cash-register"></i> PDV</a>
+        <a href="caixa.html" class="ativo"><i class="fa-solid fa-vault"></i> Caixa</a>
+        <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
+        <a href="entregador.html" data-only-admin><i class="fa-solid fa-motorcycle"></i> Entregas</a>
+        <a href="historico.html" data-only-admin><i class="fa-solid fa-clock-rotate-left"></i> Histórico</a>
+      </nav>
 
-<h1>Controle de Caixa</h1>
+      <a class="sidebarAction suporte" href="https://wa.me/11987293823" target="_blank" rel="noopener noreferrer">
+        <i class="fa-brands fa-whatsapp"></i> Solicitar suporte
+      </a>
+      <button id="logout" class="sidebarAction sair">Sair</button>
+    </aside>
 
-<div id="caixaFechado">
+    <main class="conteudoAdmin">
+      <header class="topoCaixa">
+        <div>
+          <h1>Controle de Caixa</h1>
+          <p>Abertura, sangria, fechamento e histórico por forma de pagamento.</p>
+        </div>
+      </header>
 
-<h3>Abrir Caixa</h3>
+      <section class="gridCaixa">
+        <article class="painelCard" id="statusCaixa"></article>
+        <article class="painelCard" id="resumoPagamentos"></article>
+      </section>
 
-<input id="valorInicial" placeholder="Valor inicial">
+      <section class="painelCard" id="historicoFechamentos">
+        <h3>Histórico de Fechamentos (Admin)</h3>
+        <div id="listaFechamentos"></div>
+      </section>
+    </main>
+  </div>
 
-<button onclick="abrirCaixa()">Abrir</button>
-
-</div>
-
-<div id="caixaAberto" style="display:none;">
-
-<h2>Saldo atual</h2>
-
-<h1 id="saldo">R$ 0</h1>
-
-<h3>Registrar retirada</h3>
-
-<input id="valorRetirada" placeholder="Valor">
-
-<input id="motivoRetirada" placeholder="Motivo">
-
-<button onclick="retirada()">Registrar</button>
-
-<hr>
-
-<button onclick="fecharCaixa()">Fechar Caixa</button>
-
-</div>
-
-<script type="module" src="../js/caixaControle.js"></script>
-
+  <script type="module" src="../js/caixaControle.js"></script>
+  <script type="module" src="../js/auth.js"></script>
 </body>
-
 </html>

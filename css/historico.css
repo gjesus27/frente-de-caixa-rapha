@@ -258,3 +258,7 @@ td .acoes{
     flex:1;
   }
 }
+
+
+.sidebarUser{margin:0 0 8px;color:#c7c7ff;font-size:12px;line-height:1.4;}
+.sidebarAction.suporte{background:#25d366;color:#083b1b;text-decoration:none;display:block;}

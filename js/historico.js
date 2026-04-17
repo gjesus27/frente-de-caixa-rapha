@@ -6,9 +6,14 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
-if(!usuario){
-  window.location.href = "login.html";
+import { aplicarUsuarioLogado, exigirLogin } from "./layout.js";
+
+const usuario = exigirLogin();
+aplicarUsuarioLogado();
+
+if(!usuario?.permissoes?.includes("admin")){
+  alert("Somente administradores podem acessar o histórico.");
+  window.location.href = "pdv.html";
 }
 
 const tabelaVendas = document.getElementById("tabelaVendas");

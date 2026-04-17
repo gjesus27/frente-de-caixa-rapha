@@ -41,7 +41,7 @@
   <!-- DIREITA -->
   <div class="menuArea desktopOnly">
 
-    <span id="usuarioLogado"></span>
+    <span id="usuarioLogadoDesktop" data-usuario-logado></span>
 
     <div id="menuAdmin" class="menuAdmin hidden">
       <button onclick="irProdutos()">
@@ -77,7 +77,7 @@
 <!-- MENU MOBILE -->
 <div id="menuMobile" class="menuMobile">
 
-  <span id="usuarioLogado"></span>
+  <span id="usuarioLogadoMobile" data-usuario-logado></span>
 
   <button onclick="abrirCaixaManual()">
     <i class="fa-solid fa-cash-register"></i> Abrir Caixa
@@ -115,6 +115,12 @@
 
 </div>
 
+
+<div class="pdvModos">
+  <button id="btnModoBalcao" class="modoBtn ativo" onclick="alternarModoPdv('balcao')">Balcão</button>
+  <button id="btnModoMesas" class="modoBtn" onclick="alternarModoPdv('mesas')">Mesas</button>
+</div>
+
 <div id="pedidosEspera">
 
 <h3>Pedidos em espera</h3>
@@ -123,7 +129,7 @@
 
 </div>
 
-<div class="pdvContainer">
+<div id="modoBalcao" class="pdvContainer">
 
 <div id="categorias" class="categorias"></div>
 
@@ -198,6 +204,34 @@ oninput="filtrarProdutos()"
 
 </div>
 
+<section id="modoMesas" class="mesasContainer hidden">
+  <div class="mesasSidebar">
+    <h3>Mesas abertas</h3>
+    <div class="abrirMesa">
+      <input id="numeroMesa" type="number" placeholder="Número da mesa">
+      <button onclick="abrirMesa()"><i class="fa-solid fa-plus"></i> Abrir mesa</button>
+    </div>
+    <div id="listaMesas"></div>
+  </div>
+  <div class="mesaDetalhe">
+    <h3 id="tituloMesa">Selecione uma mesa</h3>
+    <div id="mesaItens" class="mesaItens"></div>
+    <h4>Adicionar produto</h4>
+    <div id="produtosMesa" class="produtosMesa"></div>
+    <div class="pagamentoMesa">
+      <select id="pagamentoMesa">
+        <option value="dinheiro">Dinheiro</option>
+        <option value="pix">PIX</option>
+        <option value="debito">Débito</option>
+        <option value="credito">Crédito</option>
+        <option value="ticket">Ticket</option>
+        <option value="cashback">Cashback</option>
+      </select>
+      <button onclick="fecharMesaSelecionada()">Fechar Mesa</button>
+    </div>
+  </div>
+</section>
+
 <div class="mobileNav">
   <button onclick="trocarTela('produtos')">
     🛒 <span>Produtos</span>
@@ -218,6 +252,7 @@ oninput="filtrarProdutos()"
 </button>
 
 <script type="module" src="../js/caixa.js"></script>
+<script type="module">import { aplicarUsuarioLogado } from "../js/layout.js"; aplicarUsuarioLogado();</script>
 
 </body>
 </html>
