@@ -708,3 +708,34 @@ background:#00c853;
 color:white;
 }
 
+
+.hidden{display:none !important;}
+
+.pdvModos{
+  display:flex;
+  gap:10px;
+  padding:10px 20px;
+  background:#f3e8ff;
+}
+
+.modoBtn{border:none;padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:700;background:#e9d5ff;color:#4c1d95;}
+.modoBtn.ativo{background:#5e17eb;color:#fff;}
+
+.mesasContainer{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px;}
+.mesasSidebar,.mesaDetalhe{background:#fff;border-radius:12px;padding:14px;box-shadow:0 4px 15px rgba(0,0,0,.08);}
+.abrirMesa{display:flex;gap:8px;margin-bottom:10px;}
+.abrirMesa input{flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;}
+.abrirMesa button{border:none;background:#5e17eb;color:#fff;border-radius:8px;padding:8px 10px;cursor:pointer;}
+#listaMesas{display:flex;flex-direction:column;gap:8px;}
+.mesaCard{border:1px solid #ddd;background:#fafafa;border-radius:10px;padding:10px;display:flex;justify-content:space-between;cursor:pointer;}
+.mesaCard.ativa{border-color:#5e17eb;background:#f3e8ff;}
+.mesaItens{min-height:140px;padding:10px;border:1px dashed #ddd;border-radius:8px;background:#fafafa;}
+.produtosMesa{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:8px;}
+.produtosMesa button{border:1px solid #ddd;background:#fff;border-radius:8px;padding:8px;cursor:pointer;text-align:left;}
+.pagamentoMesa{display:flex;gap:8px;margin-top:10px;}
+.pagamentoMesa select,.pagamentoMesa button{padding:10px;border-radius:8px;border:1px solid #ddd;}
+.pagamentoMesa button{background:#16a34a;color:#fff;border:none;cursor:pointer;}
+
+@media(max-width:900px){
+  .mesasContainer{grid-template-columns:1fr;}
+}

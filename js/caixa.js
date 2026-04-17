@@ -44,7 +44,7 @@ if(!usuario){
 window.location.href="login.html";
 }
 
-document.getElementById("usuarioLogado").innerText = usuario.nome;
+document.querySelectorAll("[data-usuario-logado]").forEach((el)=>el.innerText = usuario.nome);
 
 if(usuario.permissoes.includes("admin")){
 document.getElementById("menuAdmin").classList.remove("hidden");
@@ -1037,6 +1037,161 @@ alert("Venda finalizada");
 
 }
 
+
+
+/* ========================== */
+/* MESAS / COMANDAS */
+/* ========================== */
+
+let mesasAbertas = [];
+let mesaSelecionada = null;
+
+window.alternarModoPdv = (modo)=>{
+  const balcao = document.getElementById("modoBalcao");
+  const mesas = document.getElementById("modoMesas");
+  const btnB = document.getElementById("btnModoBalcao");
+  const btnM = document.getElementById("btnModoMesas");
+
+  if(modo === "mesas"){
+    balcao.classList.add("hidden");
+    mesas.classList.remove("hidden");
+    btnB.classList.remove("ativo");
+    btnM.classList.add("ativo");
+    carregarMesas();
+    renderProdutosMesa();
+  }else{
+    balcao.classList.remove("hidden");
+    mesas.classList.add("hidden");
+    btnB.classList.add("ativo");
+    btnM.classList.remove("ativo");
+  }
+};
+
+async function carregarMesas(){
+  const snap = await getDocs(query(collection(db,"comandas"), where("aberta","==",true)));
+  mesasAbertas = [];
+  snap.forEach((d)=>mesasAbertas.push({ id:d.id, ...d.data() }));
+  mesasAbertas.sort((a,b)=>Number(a.numeroMesa||0)-Number(b.numeroMesa||0));
+  renderMesas();
+}
+
+function renderMesas(){
+  const lista = document.getElementById("listaMesas");
+  if(!lista) return;
+  lista.innerHTML = "";
+
+  if(!mesasAbertas.length){
+    lista.innerHTML = "<p>Nenhuma mesa aberta.</p>";
+    return;
+  }
+
+  mesasAbertas.forEach((m)=>{
+    const btn = document.createElement("button");
+    btn.className = `mesaCard ${mesaSelecionada?.id === m.id ? "ativa" : ""}`;
+    btn.innerHTML = `<span>Mesa ${m.numeroMesa}</span><strong>R$ ${Number(m.total || 0).toFixed(2)}</strong>`;
+    btn.onclick = ()=>{ mesaSelecionada = m; renderMesas(); renderMesaDetalhe(); };
+    lista.appendChild(btn);
+  });
+}
+
+window.abrirMesa = async ()=>{
+  const numero = Number(document.getElementById("numeroMesa").value);
+  if(!numero){ alert("Informe o número da mesa"); return; }
+
+  await addDoc(collection(db,"comandas"), {
+    numeroMesa: numero,
+    aberta: true,
+    criadoEm: new Date(),
+    itens: [],
+    total: 0
+  });
+
+  document.getElementById("numeroMesa").value = "";
+  carregarMesas();
+};
+
+function renderProdutosMesa(){
+  const div = document.getElementById("produtosMesa");
+  if(!div) return;
+  div.innerHTML = "";
+  listaProdutos.forEach((p)=>{
+    const b = document.createElement("button");
+    b.innerHTML = `<span>${p.nome}</span><strong>R$ ${Number(p.preco).toFixed(2)}</strong>`;
+    b.onclick = ()=>adicionarProdutoMesa(p);
+    div.appendChild(b);
+  });
+}
+
+async function adicionarProdutoMesa(produto){
+  if(!mesaSelecionada){ alert("Selecione uma mesa primeiro"); return; }
+
+  const itens = Array.isArray(mesaSelecionada.itens) ? [...mesaSelecionada.itens] : [];
+  const idx = itens.findIndex((i)=>i.idProduto === produto.id);
+  if(idx >= 0) itens[idx].quantidade += 1;
+  else itens.push({ idProduto: produto.id, nome: produto.nome, preco: Number(produto.preco), quantidade: 1 });
+
+  const totalMesa = itens.reduce((s,i)=>s + Number(i.preco || 0) * Number(i.quantidade || 0),0);
+  await updateDoc(doc(db,"comandas",mesaSelecionada.id), { itens, total: totalMesa });
+  mesaSelecionada = { ...mesaSelecionada, itens, total: totalMesa };
+  carregarMesas();
+  renderMesaDetalhe();
+}
+
+window.fecharMesaSelecionada = async ()=>{
+  if(!mesaSelecionada){ alert("Selecione uma mesa"); return; }
+  if(!caixaAberto){ alert("Abra o caixa antes de fechar mesa"); return; }
+
+  const pagamentos = [{ tipo: document.getElementById("pagamentoMesa").value, valor: Number(mesaSelecionada.total || 0) }];
+  const itens = (mesaSelecionada.itens || []).map((i)=>({
+    idProduto: i.idProduto,
+    nome: i.nome,
+    preco: Number(i.preco),
+    quantidade: Number(i.quantidade || 1)
+  }));
+
+  await addDoc(collection(db,"vendas"), {
+    criadoEm:new Date(),
+    pagamentos,
+    troco:0,
+    idCaixa:caixaId,
+    idUsuario:usuario.nome,
+    nomeUsuario:usuario.nome,
+    itens,
+    subtotal:Number(mesaSelecionada.total || 0),
+    total:Number(mesaSelecionada.total || 0),
+    tipo:"mesa",
+    mesaNumero: mesaSelecionada.numeroMesa,
+    status:"finalizado"
+  });
+
+  const caixaRef=doc(db,"caixa",caixaId);
+  const caixaSnap=await getDoc(caixaRef);
+  await updateDoc(caixaRef,{ saldoAtual:Number(caixaSnap.data().saldoAtual || 0) + Number(mesaSelecionada.total || 0) });
+
+  await updateDoc(doc(db,"comandas",mesaSelecionada.id), { aberta:false, fechadaEm: new Date(), formaPagamento: pagamentos[0].tipo });
+
+  alert(`Mesa ${mesaSelecionada.numeroMesa} fechada com sucesso!`);
+  mesaSelecionada = null;
+  carregarMesas();
+  renderMesaDetalhe();
+};
+
+function renderMesaDetalhe(){
+  const titulo = document.getElementById("tituloMesa");
+  const itensDiv = document.getElementById("mesaItens");
+  if(!titulo || !itensDiv) return;
+
+  if(!mesaSelecionada){
+    titulo.innerText = "Selecione uma mesa";
+    itensDiv.innerHTML = "";
+    return;
+  }
+
+  titulo.innerText = `Mesa ${mesaSelecionada.numeroMesa} • Total R$ ${Number(mesaSelecionada.total || 0).toFixed(2)}`;
+  const itens = mesaSelecionada.itens || [];
+  itensDiv.innerHTML = itens.length ? itens.map((i)=>`<p>${i.quantidade}x ${i.nome} • R$ ${(Number(i.preco)*Number(i.quantidade)).toFixed(2)}</p>`).join("") : "<p>Nenhum item adicionado.</p>";
+}
+
 window.toggleMenu = ()=>{
 
 const menu = document.getElementById("menuMobile");
@@ -1087,7 +1242,7 @@ const categorias = [...new Set(listaProdutos.map(p=>p.categoria || "outros"))];
 const div = document.getElementById("categorias");
 
 div.innerHTML = `
-<button onclick="filtrarCategoria('todas')">
+<button onclick="filtrarCategoria('todas', event)">
 🧾 Todas
 </button>
 `;
@@ -1097,7 +1252,7 @@ categorias.forEach(cat=>{
 const icone = iconesCategorias[cat] || "📦";
 
 div.innerHTML += `
-<button onclick="filtrarCategoria('${cat}')">
+<button onclick="filtrarCategoria('${cat}', event)">
 ${icone} ${cat}
 </button>
 `;
@@ -1127,25 +1282,17 @@ sobremesa: "🍰",
 outros: "📦"
 };
 
-window.filtrarCategoria = (cat)=>{
-
-document.querySelectorAll(".categorias button")
-.forEach(b=>b.classList.remove("ativa"));
-
-event.target.classList.add("ativa");
+window.filtrarCategoria = (cat, ev)=>{
+if(ev){
+  document.querySelectorAll(".categorias button").forEach(b=>b.classList.remove("ativa"));
+  ev.currentTarget.classList.add("ativa");
+}
 
 if(cat === "todas"){
-renderProdutos(listaProdutos);
-return;
+  renderProdutos(listaProdutos);
+  return;
 }
 
 const filtrados = listaProdutos.filter(p=>p.categoria === cat);
-
 renderProdutos(filtrados);
-
 };
-
-document.querySelectorAll(".mobileNav button")
-.forEach(b=>b.classList.remove("ativo"));
-
-event.currentTarget.classList.add("ativo");
