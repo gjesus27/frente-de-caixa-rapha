@@ -12,8 +12,6 @@ ELEMENTOS
 ========================= */
 
 const lista = document.getElementById("listaEntregas");
-const usuarioLogado = document.getElementById("usuarioLogado");
-const menuAdmin = document.getElementById("menuAdmin");
 const mapaDiv = document.getElementById("mapa");
 
 /* =========================
@@ -23,17 +21,7 @@ USUARIO LOGADO
 const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
 
 if(!usuario){
-
-window.location.href="../login.html";
-
-}
-
-usuarioLogado.innerText = usuario.nome;
-
-if(usuario.permissoes && usuario.permissoes.includes("admin")){
-
-menuAdmin.classList.remove("hidden");
-
+  window.location.href="login.html";
 }
 
 /* =========================
@@ -333,32 +321,3 @@ ouvirEntregas();
 
 };
 
-/* =========================
-MENU
-========================= */
-
-window.irDashboard=()=>{
-
-window.location.href="../pages/dashboard.html";
-
-};
-
-window.irPDV=()=>{
-
-window.location.href="../pages/pdv.html";
-
-};
-
-window.irProdutos=()=>{
-
-window.location.href="../pages/produtos.html";
-
-};
-
-window.logout=()=>{
-
-localStorage.removeItem("usuarioLogado");
-
-window.location.href="../pages/login.html";
-
-};
