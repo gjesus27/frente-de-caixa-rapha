@@ -122,6 +122,7 @@ body{
 @media(max-width:1100px){
   .pdvPage{min-height:auto;overflow:visible;}
   .pdvGrid,.mesasWrap{grid-template-columns:1fr;}
+
   .carrinhoCard{
     order:-1;
     position:sticky;
@@ -134,7 +135,6 @@ body{
     min-height:0;
     max-height:none;
   }
-}
 
 @media(max-width:900px){
   .pdvPage{
@@ -167,8 +167,8 @@ body{
 
   .produtosGrid{
     grid-template-columns:repeat(2,minmax(0,1fr));
+
     max-height:46dvh;
-  }
 
   .pagamentos{
     grid-template-columns:repeat(2,minmax(0,1fr));
