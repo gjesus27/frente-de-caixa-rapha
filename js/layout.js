@@ -13,7 +13,7 @@ export function exigirLogin(){
 
 export function aplicarUsuarioLogado(){
   const usuario = obterUsuarioLogado();
-  const alvos = document.querySelectorAll('[data-usuario-logado]');
+  const alvos = document.querySelectorAll("[data-usuario-logado]");
 
   alvos.forEach((el)=>{
     if(!usuario){
@@ -23,6 +23,14 @@ export function aplicarUsuarioLogado(){
 
     const nivel = Array.isArray(usuario.permissoes) ? usuario.permissoes.join(", ") : "sem permissão";
     el.textContent = `${usuario.nome || "Usuário"} • ${nivel}`;
+  });
+
+  const soAdmin = document.querySelectorAll("[data-only-admin]");
+  const isAdmin = Boolean(usuario?.permissoes?.includes("admin"));
+  soAdmin.forEach((el)=>{
+    if(!isAdmin){
+      el.style.display = "none";
+    }
   });
 
   const logoutBtn = document.getElementById("logout");

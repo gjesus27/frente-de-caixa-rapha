@@ -1,258 +1,108 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>PDV - Açaí do Rapha</title>
-
-<link rel="stylesheet" href="../css/pdv.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDV - Açaí do Rapha</title>
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/pdv.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
 </head>
-
 <body>
+  <div class="layoutAdmin">
+    <aside class="sidebarAdmin">
+      <h2>Painel</h2>
+      <p class="sidebarUser" data-usuario-logado></p>
+      <nav>
+        <a href="dashboard.html" data-only-admin><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="pdv.html" class="ativo"><i class="fa-solid fa-cash-register"></i> PDV</a>
+        <a href="caixa.html"><i class="fa-solid fa-vault"></i> Caixa</a>
+        <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
+        <a href="entregador.html"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
+        <a href="historico.html" data-only-admin><i class="fa-solid fa-clock-rotate-left"></i> Histórico</a>
+      </nav>
+      <a class="sidebarAction suporte" href="https://wa.me/11987293823" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i> Solicitar suporte</a>
+      <button id="logout" class="sidebarAction sair">Sair</button>
+    </aside>
 
-<header class="topBar">
+    <main class="conteudoAdmin pdvPage">
+      <header class="pdvHeader">
+        <div>
+          <h1>PDV</h1>
+          <p>Ponto de venda e comandas de mesa com seus dados atuais.</p>
+        </div>
+        <div class="pdvModes">
+          <button id="btnModoBalcao" class="modoBtn ativo" onclick="alternarModoPdv('balcao')">Balcão</button>
+          <button id="btnModoMesas" class="modoBtn" onclick="alternarModoPdv('mesas')">Mesas</button>
+        </div>
+      </header>
 
-  <!-- ESQUERDA -->
-  <div class="logoArea">
-    <img src="../img/Logo.png">
-    <span class="tituloPDV">PDV Açaí do Rapha</span>
+      <section id="modoBalcao" class="pdvGrid">
+        <article class="produtosCard">
+          <input type="text" id="pesquisaProduto" placeholder="Buscar produto..." oninput="filtrarProdutos()">
+          <div id="categorias" class="categorias"></div>
+          <div id="produtos" class="produtosGrid"></div>
+        </article>
+
+        <article class="carrinhoCard">
+          <h2><i class="fa-solid fa-cart-shopping"></i> Carrinho</h2>
+          <input type="text" id="nomeCliente" placeholder="Nome do cliente (opcional)">
+          <div id="carrinho" class="carrinhoLista"></div>
+
+          <div class="totalBox">
+            <span>Total</span>
+            <strong id="total">R$ 0,00</strong>
+          </div>
+
+          <div class="pagamentos">
+            <button onclick="pagarSimples('dinheiro')"><i class="fa-solid fa-money-bill"></i> Dinheiro</button>
+            <button onclick="pagarSimples('pix')"><i class="fa-brands fa-pix"></i> PIX</button>
+            <button onclick="pagarSimples('debito')"><i class="fa-solid fa-credit-card"></i> Débito</button>
+            <button onclick="pagarSimples('credito')"><i class="fa-solid fa-credit-card"></i> Crédito</button>
+            <button onclick="pagarSimples('ticket')"><i class="fa-solid fa-ticket"></i> Ticket</button>
+            <button onclick="abrirPagamentoMisto()"><i class="fa-solid fa-layer-group"></i> Misto</button>
+            <button onclick="pagarSimples('cashback')"><i class="fa-solid fa-coins"></i> Cashback</button>
+          </div>
+        </article>
+      </section>
+
+      <section id="modoMesas" class="mesasWrap hidden">
+        <article class="mesasListaCard">
+          <div class="abrirMesa">
+            <input id="numeroMesa" type="number" placeholder="Número da mesa">
+            <button onclick="abrirMesa()"><i class="fa-solid fa-plus"></i> Abrir</button>
+          </div>
+          <div id="listaMesas" class="listaMesas"></div>
+        </article>
+
+        <article class="mesaDetalheCard">
+          <div class="mesaTituloRow">
+            <h3 id="tituloMesa">Selecione uma mesa</h3>
+            <button class="btnFecharMesa" onclick="fecharMesaSelecionada()">Fechar Mesa</button>
+          </div>
+          <div id="mesaItens" class="mesaItens"></div>
+
+          <div class="mesaFooter">
+            <select id="pagamentoMesa">
+              <option value="dinheiro">Dinheiro</option>
+              <option value="pix">PIX</option>
+              <option value="debito">Débito</option>
+              <option value="credito">Crédito</option>
+              <option value="ticket">Ticket</option>
+              <option value="cashback">Cashback</option>
+            </select>
+          </div>
+
+          <h4>Adicionar produto</h4>
+          <div id="produtosMesa" class="produtosMesa"></div>
+        </article>
+      </section>
+    </main>
   </div>
 
-  <!-- CENTRO (CAIXA) -->
-  <div class="acoesCaixa desktopOnly">
-    <button onclick="abrirCaixaManual()">
-      <i class="fa-solid fa-cash-register"></i> Abrir Caixa
-    </button>
-
-    <button onclick="fecharCaixaManual()">
-      <i class="fa-solid fa-chart-line"></i> Fechar Caixa
-    </button>
-
-    <button onclick="retirada()">
-      <i class="fa-solid fa-arrow-up"></i> Retirada
-    </button>
-  </div>
-
-  <!-- DIREITA -->
-  <div class="menuArea desktopOnly">
-
-    <span id="usuarioLogadoDesktop" data-usuario-logado></span>
-
-    <div id="menuAdmin" class="menuAdmin hidden">
-      <button onclick="irProdutos()">
-        <i class="fa-solid fa-box"></i> Produtos
-      </button>
-
-      <button onclick="irEntregas()">
-        <i class="fa-solid fa-motorcycle"></i> Entregas
-      </button>
-
-      <button onclick="irDashboard()">
-        <i class="fa-solid fa-chart-pie"></i> Dashboard
-      </button>
-
-      <button onclick="irHistorico()">
-        <i class="fa-solid fa-clock-rotate-left"></i> Histórico
-      </button>
-    </div>
-
-    <button onclick="logout()">
-      <i class="fa-solid fa-right-from-bracket"></i> Sair
-    </button>
-
-  </div>
-
-  <!-- HAMBURGUER (SÓ MOBILE) -->
-  <button class="menuToggle" onclick="toggleMenu()">
-    <i class="fa-solid fa-bars"></i>
-  </button>
-
-</header>
-
-<!-- MENU MOBILE -->
-<div id="menuMobile" class="menuMobile">
-
-  <span id="usuarioLogadoMobile" data-usuario-logado></span>
-
-  <button onclick="abrirCaixaManual()">
-    <i class="fa-solid fa-cash-register"></i> Abrir Caixa
-  </button>
-
-  <button onclick="fecharCaixaManual()">
-    <i class="fa-solid fa-chart-line"></i> Fechar Caixa
-  </button>
-
-  <button onclick="retirada()">
-    <i class="fa-solid fa-arrow-up"></i> Retirada
-  </button>
-
-  <div id="menuAdmin" class="menuAdmin hidden">
-    <button onclick="irProdutos()">
-      <i class="fa-solid fa-box"></i> Produtos
-    </button>
-
-    <button onclick="irEntregas()">
-      <i class="fa-solid fa-motorcycle"></i> Entregas
-    </button>
-
-    <button onclick="irDashboard()">
-      <i class="fa-solid fa-chart-pie"></i> Dashboard
-    </button>
-
-    <button onclick="irHistorico()">
-      <i class="fa-solid fa-clock-rotate-left"></i> Histórico
-    </button>
-  </div>
-
-  <button onclick="logout()">
-    <i class="fa-solid fa-right-from-bracket"></i> Sair
-  </button>
-
-</div>
-
-
-<div class="pdvModos">
-  <button id="btnModoBalcao" class="modoBtn ativo" onclick="alternarModoPdv('balcao')">Balcão</button>
-  <button id="btnModoMesas" class="modoBtn" onclick="alternarModoPdv('mesas')">Mesas</button>
-</div>
-
-<div id="pedidosEspera">
-
-<h3>Pedidos em espera</h3>
-
-<div id="listaPedidos"></div>
-
-</div>
-
-<div id="modoBalcao" class="pdvContainer">
-
-<div id="categorias" class="categorias"></div>
-
-<!-- PRODUTOS -->
-
-<div class="areaProdutos">
-
-<div class="buscaProdutos">
-
-<input 
-type="text"
-id="pesquisaProduto"
-placeholder="Pesquisar produto..."
-oninput="filtrarProdutos()"
-/>
-
-</div>
-
-<div id="produtos" class="produtos"></div>
-
-</div>
-
-<!-- CAIXA -->
-
-<div class="caixa">
-
-<h2>Venda</h2>
-
-<div id="carrinho" class="carrinho"></div>
-
-<div class="totalBox">
-
-<span>Total</span>
-
-<h1 id="total">R$ 0,00</h1>
-
-</div>
-
-<div class="pagamentos">
-
-<button onclick="pagarSimples('dinheiro')">
-<i class="fa-solid fa-money-bill"></i> Dinheiro
-</button>
-
-<button onclick="pagarSimples('pix')">
-<i class="fa-brands fa-pix"></i> PIX
-</button>
-
-<button onclick="pagarSimples('debito')">
-<i class="fa-solid fa-credit-card"></i> Débito
-</button>
-
-<button onclick="pagarSimples('credito')">
-<i class="fa-solid fa-credit-card"></i> Crédito
-</button>
-
-<button onclick="pagarSimples('ticket')">
-<i class="fa-solid fa-ticket"></i> Ticket
-</button>
-
-<button onclick="abrirPagamentoMisto()">
-<i class="fa-solid fa-layer-group"></i> Misto
-</button>
-
-<button onclick="pagarSimples('cashback')">
-<i class="fa-solid fa-coins"></i> Cashback
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-<section id="modoMesas" class="mesasContainer hidden">
-  <div class="mesasSidebar">
-    <h3>Mesas abertas</h3>
-    <div class="abrirMesa">
-      <input id="numeroMesa" type="number" placeholder="Número da mesa">
-      <button onclick="abrirMesa()"><i class="fa-solid fa-plus"></i> Abrir mesa</button>
-    </div>
-    <div id="listaMesas"></div>
-  </div>
-  <div class="mesaDetalhe">
-    <h3 id="tituloMesa">Selecione uma mesa</h3>
-    <div id="mesaItens" class="mesaItens"></div>
-    <h4>Adicionar produto</h4>
-    <div id="produtosMesa" class="produtosMesa"></div>
-    <div class="pagamentoMesa">
-      <select id="pagamentoMesa">
-        <option value="dinheiro">Dinheiro</option>
-        <option value="pix">PIX</option>
-        <option value="debito">Débito</option>
-        <option value="credito">Crédito</option>
-        <option value="ticket">Ticket</option>
-        <option value="cashback">Cashback</option>
-      </select>
-      <button onclick="fecharMesaSelecionada()">Fechar Mesa</button>
-    </div>
-  </div>
-</section>
-
-<div class="mobileNav">
-  <button onclick="trocarTela('produtos')">
-    🛒 <span>Produtos</span>
-  </button>
-
-  <button onclick="trocarTela('carrinho')">
-    📦 <span>Carrinho</span>
-  </button>
-
-  <button onclick="trocarTela('pagamento')">
-    💳 <span>Pagamento</span>
-  </button>
-</div>
-
-<button id="btnFinalizarMobile" onclick="trocarTela('pagamento')">
-💳 Finalizar
-<span id="badgeCarrinho">0</span>
-</button>
-
-<script type="module" src="../js/caixa.js"></script>
-<script type="module">import { aplicarUsuarioLogado } from "../js/layout.js"; aplicarUsuarioLogado();</script>
-
+  <script type="module" src="../js/caixa.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module">import { aplicarUsuarioLogado } from "../js/layout.js"; aplicarUsuarioLogado();</script>
 </body>
 </html>

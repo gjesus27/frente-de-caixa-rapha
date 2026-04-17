@@ -33,7 +33,7 @@ if(listaUsuarios){
     window.location.href = "pdv.html";
   }
 
-  if(pagina.includes("entregador.html") && !temPermissao("admin")){
+  if(pagina.includes("entregador.html") && !temPermissao("admin") && !temPermissao("caixa")){
     alert("Sem acesso às entregas");
     window.location.href = "pdv.html";
   }

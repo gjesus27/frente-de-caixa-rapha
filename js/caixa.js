@@ -1,1050 +1,289 @@
 import { db } from "./firebaseConfig.js";
-
 import {
-collection,
-getDocs,
-updateDoc,
-doc,
-addDoc,
-query,
-where,
-getDoc,
-onSnapshot
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-/* ========================== */
-/* ELEMENTOS */
-/* ========================== */
 
 const produtosDiv = document.getElementById("produtos");
 const carrinhoDiv = document.getElementById("carrinho");
 const totalSpan = document.getElementById("total");
-const listaPedidosDiv = document.getElementById("listaPedidos");
+const pesquisaInput = document.getElementById("pesquisaProduto");
+const categoriasDiv = document.getElementById("categorias");
+const nomeClienteInput = document.getElementById("nomeCliente");
 
-let descontoPercentual = 0;
-
-/* ========================== */
-/* VARIÁVEIS */
-/* ========================== */
-
+let listaProdutos = [];
 let carrinho = [];
 let total = 0;
-let listaProdutos = [];
+let categoriaSelecionada = "todas";
 
 let caixaId = null;
 let caixaAberto = false;
 
-/* ========================== */
-/* USUARIO */
-/* ========================== */
+let mesasAbertas = [];
+let mesaSelecionada = null;
 
 const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
-
 if(!usuario){
-window.location.href="login.html";
+  window.location.href = "login.html";
 }
 
-document.querySelectorAll("[data-usuario-logado]").forEach((el)=>el.innerText = usuario.nome);
+async function carregarCaixaAberto(){
+  const q = query(
+    collection(db,"caixa"),
+    where("usuario","==",usuario.nome),
+    where("aberto","==",true)
+  );
 
-if(usuario.permissoes.includes("admin")){
-document.getElementById("menuAdmin").classList.remove("hidden");
+  const snapshot = await getDocs(q);
+
+  if(snapshot.empty){
+    alert("Abra o caixa na tela de Caixa antes de vender.");
+    caixaAberto = false;
+    return;
+  }
+
+  snapshot.forEach((d)=>{ caixaId = d.id; });
+  caixaAberto = true;
 }
-
-/* ========================== */
-/* MODAL */
-/* ========================== */
-
-function abrirModal(titulo,conteudo,acaoConfirmar,acaoCancelar){
-
-const modal = document.createElement("div");
-
-modal.className = "modalFundo";
-
-modal.innerHTML = `
-<div class="modalBox">
-
-<h2>${titulo}</h2>
-
-<div class="modalConteudo">
-${conteudo}
-</div>
-
-<div class="modalBotoes">
-<button id="btnConfirmar">
-<i class="fa-solid fa-check"></i> Confirmar
-</button>
-
-<button id="btnCancelar">
-<i class="fa-solid fa-xmark"></i> Cancelar
-</button>
-</div>
-
-</div>
-`;
-
-document.body.appendChild(modal);
-
-document.getElementById("btnConfirmar").onclick = async ()=>{
-if(acaoConfirmar) await acaoConfirmar();
-modal.remove();
-};
-
-modal.querySelector("#btnCancelar").onclick = ()=>{
-modal.remove();
-if(acaoCancelar) acaoCancelar();
-};
-
-modal.querySelector("#btnConfirmar").onclick = async ()=>{
-if(acaoConfirmar) await acaoConfirmar();
-modal.remove();
-};
-}
-
-/* ========================== */
-/* VERIFICAR CAIXA */
-/* ========================== */
-
-async function verificarCaixa(){
-
-const q = query(
-collection(db,"caixa"),
-where("usuario","==",usuario.nome),
-where("aberto","==",true)
-);
-
-const snapshot = await getDocs(q);
-
-if(!snapshot.empty){
-
-snapshot.forEach(d=>{
-caixaId = d.id;
-});
-
-caixaAberto = true;
-
-abrirModal(
-"Caixa aberto",
-`<p>Deseja continuar com seu caixa?</p>`,
-()=>{},
-()=>logout()
-);
-
-}else{
-
-abrirModal(
-"Abrir Caixa",
-`<input id="valorInicial" type="number" placeholder="Valor inicial">`,
-()=>abrirCaixa(),
-()=>logout()
-);
-
-}
-
-}
-
-verificarCaixa();
-
-/* ========================== */
-/* ABRIR CAIXA */
-/* ========================== */
-
-async function abrirCaixa(){
-
-const valor = Number(document.getElementById("valorInicial").value);
-
-if(!valor){
-alert("Informe o valor inicial");
-return;
-}
-
-const docRef = await addDoc(collection(db,"caixa"),{
-
-usuario: usuario.nome,
-aberto: true,
-valorInicial: valor,
-saldoAtual: valor,
-dataAbertura: new Date()
-
-});
-
-caixaId = docRef.id;
-caixaAberto = true;
-
-alert("Caixa aberto");
-
-}
-
-/* ========================== */
-/* FECHAR CAIXA */
-/* ========================== */
-
-window.fecharCaixaManual = async ()=>{
-
-if(!caixaAberto){
-alert("Nenhum caixa aberto");
-return;
-}
-
-const q = query(
-collection(db,"vendas"),
-where("idCaixa","==",caixaId)
-);
-
-const snapshot = await getDocs(q);
-
-let dinheiro=0,pix=0,debito=0,credito=0,ticket=0,cashback=0;
-
-/* 🔥 AQUI ESTÁ O QUE FALTAVA */
-snapshot.forEach(docSnap=>{
-
-const venda = docSnap.data();
-
-if(venda.pagamentos){
-
-venda.pagamentos.forEach(p=>{
-
-switch(p.tipo){
-case "dinheiro": dinheiro+=p.valor; break;
-case "pix": pix+=p.valor; break;
-case "debito": debito+=p.valor; break;
-case "credito": credito+=p.valor; break;
-case "ticket": ticket+=p.valor; break;
-case "cashback": cashback+=p.valor; break;
-}
-
-});
-
-}else{
-
-// fallback antigo
-const valor = Number(venda.total||0);
-
-switch(venda.formaPagamento){
-case "dinheiro": dinheiro+=valor; break;
-case "pix": pix+=valor; break;
-case "debito": debito+=valor; break;
-case "credito": credito+=valor; break;
-}
-
-}
-
-});
-
-const caixaRef = doc(db,"caixa",caixaId);
-const caixaSnap = await getDoc(caixaRef);
-
-const saldoAtual = caixaSnap.data().saldoAtual;
-
-abrirModal(
-
-"Fechamento de Caixa",
-
-`
-<p><i class="fa-solid fa-money-bill"></i> Dinheiro: R$ ${dinheiro.toFixed(2)}</p>
-<p><i class="fa-brands fa-pix"></i> Pix: R$ ${pix.toFixed(2)}</p>
-<p><i class="fa-solid fa-credit-card"></i> Débito: R$ ${debito.toFixed(2)}</p>
-<p><i class="fa-solid fa-credit-card"></i> Crédito: R$ ${credito.toFixed(2)}</p>
-<p><i class="fa-solid fa-ticket"></i> Ticket: R$ ${ticket.toFixed(2)}</p>
-<p><i class="fa-solid fa-coins"></i> Cashback: R$ ${cashback.toFixed(2)}</p>
-
-<hr>
-
-<p><b>Total vendido:</b> R$ ${(dinheiro+pix+debito+credito+ticket).toFixed(2)}</p>
-<p><b>Saldo esperado:</b> R$ ${saldoAtual.toFixed(2)}</p>
-`,
-
-async ()=>{
-
-await updateDoc(doc(db,"caixa",caixaId),{
-aberto:false,
-dataFechamento:new Date()
-});
-
-alert("Caixa fechado");
-
-caixaAberto=false;
-
-}
-
-);
-
-};
-
-/* ========================== */
-/* RETIRADA */
-/* ========================== */
-
-window.retirada = ()=>{
-
-abrirModal(
-
-"Registrar retirada",
-
-`
-<input id="valorRetirada" type="number" placeholder="Valor">
-<input id="motivoRetirada" placeholder="Motivo">
-`,
-
-()=>registrarRetirada()
-
-);
-
-};
-
-async function registrarRetirada(){
-
-const valor = Number(document.getElementById("valorRetirada").value);
-const motivo = document.getElementById("motivoRetirada").value;
-
-if(!valor) return;
-
-const caixaRef = doc(db,"caixa",caixaId);
-const caixaSnap = await getDoc(caixaRef);
-
-const saldoAtual = caixaSnap.data().saldoAtual;
-
-await updateDoc(caixaRef,{
-saldoAtual: saldoAtual - valor
-});
-
-await addDoc(collection(db,"retiradas"),{
-valor,
-motivo,
-usuario:usuario.nome,
-caixaId,
-data:new Date()
-});
-
-alert("Retirada registrada");
-
-}
-
-/* ========================== */
-/* PRODUTOS */
-/* ========================== */
 
 async function carregarProdutos(){
+  const snapshot = await getDocs(collection(db,"produtos"));
+  listaProdutos = [];
 
-const snapshot = await getDocs(collection(db,"produtos"));
+  snapshot.forEach((docSnap)=>{
+    const p = docSnap.data();
+    listaProdutos.push({
+      id: docSnap.id,
+      nome: p.nome || "Produto sem nome",
+      preco: Number(p.preco || 0),
+      imagem: p.imagem || "https://via.placeholder.com/120",
+      categoria: (p.categoria || "outros").toLowerCase(),
+      estoque: Number(p.estoque || 0)
+    });
+  });
 
-listaProdutos=[];
-
-snapshot.forEach(docSnap=>{
-
-const p = docSnap.data();
-
-// 🔥 não vamos mais travar por "ativo"
-p.id = docSnap.id;
-
-// garante padrão
-p.nome = p.nome || "Produto sem nome";
-p.preco = Number(p.preco || 0);
-p.imagem = p.imagem || "https://via.placeholder.com/100";
-
-listaProdutos.push(p);
-
-});
-
-renderProdutos(listaProdutos);
-
+  listaProdutos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  renderCategorias();
+  renderProdutos();
+  renderProdutosMesa();
 }
 
-carregarProdutos();
-
-function renderProdutos(lista){
-
-produtosDiv.innerHTML="";
-
-lista.forEach(p=>{
-
-const div = document.createElement("div");
-
-div.classList.add("produto");
-
-div.innerHTML=`
-<img src="${p.imagem}">
-<h4>${p.nome}</h4>
-<p>R$ ${p.preco.toFixed(2)}</p>
-`;
-
-div.onclick=()=>{
-carrinho.push(p);
-renderCarrinho();
-};
-
-produtosDiv.appendChild(div);
-
-});
-
+function getProdutosFiltrados(){
+  const termo = (pesquisaInput?.value || "").trim().toLowerCase();
+  return listaProdutos.filter((p)=>{
+    const byNome = p.nome.toLowerCase().includes(termo);
+    const byCategoria = categoriaSelecionada === "todas" || p.categoria === categoriaSelecionada;
+    return byNome && byCategoria;
+  });
 }
 
-/* ========================== */
-/* FILTRO */
-/* ========================== */
+function renderProdutos(){
+  if(!produtosDiv) return;
+  const filtrados = getProdutosFiltrados();
+  produtosDiv.innerHTML = "";
 
-window.filtrarProdutos=()=>{
+  if(!filtrados.length){
+    produtosDiv.innerHTML = "<p>Nenhum produto encontrado.</p>";
+    return;
+  }
 
-const termo=document.getElementById("pesquisaProduto").value.toLowerCase();
-
-const filtrados=listaProdutos.filter(p=>
-p.nome.toLowerCase().includes(termo)
-);
-
-renderProdutos(filtrados);
-
-};
-
-/* ========================== */
-/* CARRINHO */
-/* ========================== */
-
-function renderCarrinho(){
-
-carrinhoDiv.innerHTML="";
-total = 0;
-
-carrinho.forEach((item,i)=>{
-
-total += Number(item.preco);
-
-const div = document.createElement("div");
-
-div.classList.add("item");
-
-div.innerHTML=`
-<span>${item.nome}</span>
-<div>
-R$ ${Number(item.preco).toFixed(2)}
-<button onclick="remover(${i})">X</button>
-</div>
-`;
-
-carrinhoDiv.appendChild(div);
-
-});
-
-totalSpan.innerText = "R$ " + total.toFixed(2);
-
-document.getElementById("badgeCarrinho").innerText = carrinho.length;
-
+  filtrados.forEach((p)=>{
+    const card = document.createElement("button");
+    card.className = "produto";
+    card.innerHTML = `
+      <img src="${p.imagem}" alt="${p.nome}">
+      <h4>${p.nome}</h4>
+      <p>R$ ${p.preco.toFixed(2)}</p>
+      <small>Estoque: ${p.estoque}</small>
+    `;
+    card.onclick = ()=> adicionarAoCarrinho(p);
+    produtosDiv.appendChild(card);
+  });
 }
 
-/* 👇 COLOCA AQUI */
-window.remover = (i)=>{
-  carrinho.splice(i,1);
+function renderCategorias(){
+  if(!categoriasDiv) return;
+
+  const categorias = ["todas", ...new Set(listaProdutos.map((p)=>p.categoria || "outros"))];
+  categoriasDiv.innerHTML = "";
+
+  categorias.forEach((cat)=>{
+    const b = document.createElement("button");
+    b.textContent = cat === "todas" ? "🧾 Todas" : cat;
+    if(cat === categoriaSelecionada) b.classList.add("ativa");
+    b.onclick = ()=>{
+      categoriaSelecionada = cat;
+      renderCategorias();
+      renderProdutos();
+      renderProdutosMesa();
+    };
+    categoriasDiv.appendChild(b);
+  });
+}
+
+function adicionarAoCarrinho(produto){
+  const existente = carrinho.find((item)=>item.id === produto.id);
+  if(existente){
+    existente.quantidade += 1;
+  }else{
+    carrinho.push({ ...produto, quantidade: 1 });
+  }
   renderCarrinho();
 }
 
-/* ========================== */
-/* FINALIZAR VENDA */
-/* ========================== */
-
-window.finalizar=async(tipo)=>{
-
-if(!caixaAberto){
-alert("Abra o caixa");
-return;
+function alterarQuantidade(id, delta){
+  carrinho = carrinho
+    .map((item)=> item.id === id ? { ...item, quantidade: item.quantidade + delta } : item)
+    .filter((item)=> item.quantidade > 0);
+  renderCarrinho();
 }
 
-if(carrinho.length===0){
-alert("Adicione produtos");
-return;
+function renderCarrinho(){
+  if(!carrinhoDiv) return;
+
+  total = carrinho.reduce((acc,item)=> acc + (item.preco * item.quantidade),0);
+  carrinhoDiv.innerHTML = "";
+
+  if(!carrinho.length){
+    carrinhoDiv.innerHTML = "<p>Carrinho vazio.</p>";
+  }else{
+    carrinho.forEach((item)=>{
+      const row = document.createElement("div");
+      row.className = "item";
+      row.innerHTML = `
+        <div>
+          <div class="itemNome">${item.nome}</div>
+          <div class="itemPreco">R$ ${item.preco.toFixed(2)}</div>
+        </div>
+        <div class="itemAcoes">
+          <button data-delta="-1">-</button>
+          <strong>${item.quantidade}</strong>
+          <button data-delta="1">+</button>
+        </div>
+        <div class="itemTotal">R$ ${(item.preco * item.quantidade).toFixed(2)}</div>
+      `;
+
+      row.querySelectorAll("button").forEach((btn)=>{
+        btn.onclick = ()=>alterarQuantidade(item.id, Number(btn.dataset.delta));
+      });
+      carrinhoDiv.appendChild(row);
+    });
+  }
+
+  totalSpan.textContent = `R$ ${total.toFixed(2)}`;
 }
 
-let itens=carrinho.map(p=>({
+async function finalizarVendaCompleta(pagamentos, troco = 0){
+  if(!caixaAberto || !caixaId){
+    alert("Abra o caixa antes de vender.");
+    return;
+  }
 
-idProduto:p.id,
-nome:p.nome,
-preco:Number(p.preco),
-quantidade:1
+  if(!carrinho.length){
+    alert("Carrinho vazio.");
+    return;
+  }
 
-}));
+  const itens = carrinho.map((p)=>(
+    {
+      idProduto: p.id,
+      nome: p.nome,
+      preco: Number(p.preco),
+      quantidade: Number(p.quantidade)
+    }
+  ));
 
-await addDoc(collection(db,"vendas"),{
+  await addDoc(collection(db,"vendas"),{
+    criadoEm: new Date(),
+    pagamentos,
+    troco,
+    idCaixa: caixaId,
+    idUsuario: usuario.nome,
+    nomeUsuario: usuario.nome,
+    cliente: nomeClienteInput?.value?.trim() || "Balcão",
+    itens,
+    subtotal: total,
+    total,
+    tipo: "balcao",
+    status: "finalizado"
+  });
 
-criadoEm:new Date(),
-formaPagamento:tipo,
+  const caixaRef = doc(db,"caixa",caixaId);
+  const caixaSnap = await getDoc(caixaRef);
+  const saldoAtual = Number(caixaSnap.data()?.saldoAtual || 0);
+  await updateDoc(caixaRef,{ saldoAtual: saldoAtual + total });
 
-idCaixa:caixaId,
+  for(const item of carrinho){
+    const pRef = doc(db,"produtos",item.id);
+    const produtoAtual = listaProdutos.find((p)=>p.id === item.id);
+    if(!produtoAtual) continue;
+    const novoEstoque = Math.max(0, Number(produtoAtual.estoque || 0) - Number(item.quantidade || 0));
+    await updateDoc(pRef,{ estoque: novoEstoque });
+  }
 
-idUsuario:usuario.nome,
-nomeUsuario:usuario.nome,
+  alert("Venda finalizada com sucesso.");
+  carrinho = [];
+  if(nomeClienteInput) nomeClienteInput.value = "";
+  await carregarProdutos();
+  renderCarrinho();
+}
 
-itens,
+window.pagarSimples = async(tipo)=>{
+  if(total <= 0){
+    alert("Carrinho vazio.");
+    return;
+  }
 
-subtotal:total,
-total,
+  if(tipo === "dinheiro"){
+    const recebido = Number(prompt(`Total R$ ${total.toFixed(2)}\nValor recebido em dinheiro:`));
+    if(!recebido){
+      alert("Pagamento cancelado.");
+      return;
+    }
+    if(recebido < total){
+      alert("Valor recebido é menor que o total.");
+      return;
+    }
+    await finalizarVendaCompleta([{ tipo:"dinheiro", valor: total }], recebido - total);
+    return;
+  }
 
-tipo:"balcao",
-status:"finalizado"
-
-});
-
-const caixaRef=doc(db,"caixa",caixaId);
-const caixaSnap=await getDoc(caixaRef);
-
-await updateDoc(caixaRef,{
-saldoAtual:caixaSnap.data().saldoAtual+total
-});
-
-carrinho=[];
-renderCarrinho();
-
-abrirModal(
-"Venda Finalizada",
-`
-<div style="text-align:center">
-
-<h2 style="color:#00c853;">✅ Venda concluída</h2>
-
-<p><b>Total:</b> R$ ${total.toFixed(2)}</p>
-
-${pagamentos.map(p=>`
-<p>
-${p.tipo.toUpperCase()}: R$ ${p.valor.toFixed(2)}
-</p>
-`).join("")}
-
-${troco > 0 ? `<p><b>Troco:</b> R$ ${troco.toFixed(2)}</p>` : ""}
-
-</div>
-`,
-()=>{}
-);
-
+  await finalizarVendaCompleta([{ tipo, valor: total }],0);
 };
 
-/* ========================== */
-/* PEDIDOS DELIVERY */
-/* ========================== */
+window.abrirPagamentoMisto = async()=>{
+  if(total <= 0){
+    alert("Carrinho vazio.");
+    return;
+  }
 
-function ouvirPedidos(){
+  const entrada = prompt("Pagamento misto. Digite no formato pix:20,dinheiro:10");
+  if(!entrada) return;
 
-const q=query(
-collection(db,"pedidos"),
-where("status","==","aguardando_preparo")
-);
+  const pagamentos = entrada
+    .split(",")
+    .map((item)=>item.trim())
+    .filter(Boolean)
+    .map((item)=>{
+      const [tipo, valor] = item.split(":");
+      return { tipo: (tipo || "").trim().toLowerCase(), valor: Number(valor || 0) };
+    })
+    .filter((p)=>p.tipo && p.valor > 0);
 
-onSnapshot(q,(snapshot)=>{
+  const pago = pagamentos.reduce((s,p)=>s + p.valor,0);
+  if(pago < total){
+    alert("Valor pago menor que o total.");
+    return;
+  }
 
-snapshot.docChanges().forEach(change=>{
-
-if(change.type==="added"){
-
-const pedido=change.doc.data();
-pedido.id=change.doc.id;
-
-mostrarPopupPedido(pedido);
-
-}
-
-});
-
-});
-
-}
-
-ouvirPedidos();
-
-function mostrarPopupPedido(pedido){
-
-abrirModal(
-
-`Novo Pedido #${pedido.numero}`,
-
-`
-<p>Cliente: ${pedido.cliente}</p>
-<p>Total: R$ ${pedido.total}</p>
-`,
-
-()=>iniciarPreparo(pedido),
-()=>adicionarEmEspera(pedido)
-
-);
-
-}
-
-function adicionarEmEspera(pedido){
-
-const div=document.createElement("div");
-
-div.classList.add("pedidoCard");
-div.id="pedido_"+pedido.id;
-
-div.innerHTML=`
-
-<div>
-
-<div class="pedidoStatus statusAmarelo">
-Pedido #${pedido.numero}
-</div>
-
-<div>Aguardando preparo</div>
-
-</div>
-
-<div id="timer_${pedido.id}">00:00</div>
-
-<button onclick="iniciarPreparoManual('${pedido.id}')">
-Iniciar
-</button>
-
-`;
-
-listaPedidosDiv.appendChild(div);
-
-iniciarTimer(pedido.id);
-
-}
-
-function iniciarTimer(id){
-
-let segundos=0;
-
-const el=document.getElementById("timer_"+id);
-const card=document.querySelector("#pedido_"+id+" .pedidoStatus");
-
-setInterval(()=>{
-
-segundos++;
-
-const min=Math.floor(segundos/60);
-const sec=segundos%60;
-
-el.innerText=
-`${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-
-if(segundos>300){
-
-card.classList.remove("statusAmarelo");
-card.classList.add("statusVermelho");
-
-}
-
-},1000);
-
-}
-
-/* ========================== */
-/* PREPARO */
-/* ========================== */
-
-async function iniciarPreparo(pedido){
-
-const pedidoRef=doc(db,"pedidos",pedido.id);
-const snap=await getDoc(pedidoRef);
-
-const dados=snap.data();
-
-if(dados.iniciadoPor){
-
-alert("Pedido já iniciado");
-return;
-
-}
-
-await updateDoc(pedidoRef,{
-status:"em_preparo",
-iniciadoPor:usuario.nome,
-horaInicio:new Date()
-});
-
-mostrarNotaPedido(dados,pedido.id);
-
-}
-
-window.iniciarPreparoManual=async(id)=>{
-
-const pedidoRef=doc(db,"pedidos",id);
-const snap=await getDoc(pedidoRef);
-
-const pedido=snap.data();
-pedido.id=id;
-
-if(pedido.iniciadoPor){
-alert("Pedido já iniciado");
-return;
-}
-
-await updateDoc(pedidoRef,{
-status:"em_preparo",
-iniciadoPor:usuario.nome,
-horaInicio:new Date()
-});
-
-mostrarNotaPedido(pedido,id);
-
+  await finalizarVendaCompleta(pagamentos, pago - total);
 };
-
-function mostrarNotaPedido(pedido,id){
-
-let itensHTML="";
-
-pedido.itens.forEach(item=>{
-
-itensHTML+=`
-
-<div class="linhaItem">
-<span>${item.quantidade}x ${item.nome}</span>
-<span>R$ ${(item.preco*item.quantidade).toFixed(2)}</span>
-</div>
-
-`;
-
-if(item.observacao){
-
-itensHTML+=`
-<div class="obsItem">
-Obs: ${item.observacao}
-</div>
-`;
-
-}
-
-});
-
-const div=document.createElement("div");
-
-div.classList.add("notaPedido");
-
-div.innerHTML=`
-
-<h2>Pedido #${pedido.numero}</h2>
-
-<div>${pedido.cliente}</div>
-
-<div class="itensPedido">
-${itensHTML}
-</div>
-
-<hr>
-
-<div>
-<b>Total:</b> R$ ${pedido.total}
-</div>
-
-<button onclick="finalizarPreparo('${id}')">
-Finalizar preparo
-</button>
-
-`;
-
-document.body.appendChild(div);
-
-}
-
-window.finalizarPreparo=async(id)=>{
-
-await updateDoc(doc(db,"pedidos",id),{
-status:"saiu_entrega",
-horaFimPreparo:new Date()
-});
-
-alert("Pedido pronto");
-
-document.querySelector(".notaPedido").remove();
-
-};
-
-/* ========================== */
-/* ADMIN */
-/* ========================== */
-
-window.irProdutos=()=>{
-window.location.href="produtos.html";
-};
-
-window.irEntregas=()=>{
-window.location.href="entregador.html";
-};
-
-window.irDashboard=()=>{
-window.location.href="dashboard.html";
-};
-
-window.irHistorico=()=>{
-window.location.href="historico.html";
-};
-
-/* ========================== */
-/* LOGOUT */
-/* ========================== */
-
-window.logout=()=>{
-localStorage.removeItem("usuarioLogado");
-window.location.href="login.html";
-};
-
-function pedirDesconto(callback){
-
-abrirModal(
-"Aplicar desconto?",
-`
-<p>Total atual: R$ ${total.toFixed(2)}</p>
-<input id="descontoInput" type="number" placeholder="% de desconto">
-`,
-()=>{
-
-const desconto = Number(document.getElementById("descontoInput").value) || 0;
-
-descontoPercentual = desconto;
-
-if(desconto > 0){
-const valorDesconto = total * (desconto / 100);
-total = total - valorDesconto;
-}
-
-// atualiza na tela
-totalSpan.innerText = "R$ " + total.toFixed(2);
-
-callback();
-
-}
-);
-
-}
-
-/* ========================== */
-/* NOVO SISTEMA DE PAGAMENTO */
-/* ========================== */
-
-let pagamentosTemp = [];
-
-/* PAGAMENTO SIMPLES COM TROCO */
-window.pagarSimples = (tipo)=>{
-
-if(total <= 0){
-alert("Carrinho vazio");
-return;
-}
-
-// 👇 PRIMEIRO PEDE DESCONTO
-pedirDesconto(()=>{
-
-// 💰 DINHEIRO (com troco)
-if(tipo === "dinheiro"){
-
-abrirModal(
-"Pagamento em Dinheiro",
-
-`
-<p>Total: R$ ${total.toFixed(2)}</p>
-<input id="valorPago" type="number" placeholder="Valor recebido">
-<p id="trocoTexto"></p>
-`,
-
-async ()=>{
-
-const pago = Number(document.getElementById("valorPago").value);
-
-if(!pago){
-alert("Informe o valor");
-return;
-}
-
-const troco = pago - total;
-
-await finalizarVendaCompleta([
-{tipo:"dinheiro", valor: total}
-], troco);
-
-}
-
-);
-
-setTimeout(()=>{
-
-document.getElementById("valorPago").oninput = ()=>{
-const pago = Number(document.getElementById("valorPago").value);
-const troco = pago - total;
-
-document.getElementById("trocoTexto").innerText =
-troco >= 0 
-? "Troco: R$ "+troco.toFixed(2) 
-: "Faltam: R$ "+Math.abs(troco).toFixed(2);
-};
-
-},100);
-
-// 💸 OUTROS (pix, debito, credito, ticket, cashback)
-}else{
-
-finalizarVendaCompleta([
-{tipo, valor: total}
-],0);
-
-}
-
-}); 
-
-};
-
-/* PAGAMENTO MISTO */
-window.abrirPagamentoMisto = ()=>{
-
-if(total <= 0){
-alert("Carrinho vazio");
-return;
-}
-
-pedirDesconto(()=>{
-
-pagamentosTemp = [];
-
-abrirModal(
-"Pagamento Misto",
-`
-<select id="tipoPagamento">
-<option value="dinheiro">Dinheiro</option>
-<option value="pix">PIX</option>
-<option value="debito">Débito</option>
-<option value="credito">Crédito</option>
-<option value="ticket">Ticket</option>
-<option value="cashback">Cashback</option>
-</select>
-
-<input id="valorPagamento" type="number" placeholder="Valor">
-
-<button onclick="adicionarPagamento()">Adicionar</button>
-
-<div id="listaPagamentos"></div>
-
-<p>Total: R$ ${total.toFixed(2)}</p>
-<p id="totalPago">Pago: R$ 0.00</p>
-<p id="restante"></p>
-`,
-()=> pedirDesconto(()=>confirmarPagamentoMisto())
-
-);
-
-});
-
-};
-
-/* ADICIONAR PAGAMENTO */
-window.adicionarPagamento = ()=>{
-
-const tipo = document.getElementById("tipoPagamento").value;
-const valor = Number(document.getElementById("valorPagamento").value);
-
-if(!valor) return;
-
-pagamentosTemp.push({tipo,valor});
-
-atualizarPagamentos();
-
-};
-
-/* ATUALIZA TELA */
-function atualizarPagamentos(){
-
-const lista = document.getElementById("listaPagamentos");
-
-if(!lista) return;
-
-lista.innerHTML = "";
-
-let totalPago = 0;
-
-pagamentosTemp.forEach(p=>{
-
-totalPago += p.valor;
-
-lista.innerHTML += `<p>${p.tipo}: R$ ${p.valor.toFixed(2)}</p>`;
-
-});
-
-document.getElementById("totalPago").innerText =
-"Pago: R$ "+totalPago.toFixed(2);
-
-const resto = total - totalPago;
-
-document.getElementById("restante").innerText =
-resto > 0 ? "Falta: R$ "+resto.toFixed(2) :
-"Troco: R$ "+Math.abs(resto).toFixed(2);
-
-}
-
-/* CONFIRMAR MISTO */
-async function confirmarPagamentoMisto(){
-
-let totalPago = pagamentosTemp.reduce((s,p)=>s+p.valor,0);
-
-if(totalPago < total){
-alert("Pagamento incompleto");
-return;
-}
-
-const troco = totalPago - total;
-
-await finalizarVendaCompleta(pagamentosTemp,troco);
-
-}
-
-/* FINALIZAÇÃO REAL */
-async function finalizarVendaCompleta(pagamentos,troco){
-
-if(!caixaAberto){
-alert("Abra o caixa");
-return;
-}
-
-if(carrinho.length===0){
-alert("Carrinho vazio");
-return;
-}
-
-let itens = carrinho.map(p=>({
-idProduto:p.id,
-nome:p.nome,
-preco:Number(p.preco),
-quantidade:1
-}));
-
-await addDoc(collection(db,"vendas"),{
-
-criadoEm:new Date(),
-pagamentos,
-
-troco,
-
-idCaixa:caixaId,
-
-idUsuario:usuario.nome,
-nomeUsuario:usuario.nome,
-
-itens,
-
-subtotal:total,
-total,
-
-tipo:"balcao",
-status:"finalizado"
-
-});
-
-const caixaRef=doc(db,"caixa",caixaId);
-const caixaSnap=await getDoc(caixaRef);
-
-await updateDoc(caixaRef,{
-saldoAtual:caixaSnap.data().saldoAtual+total
-});
-
-carrinho=[];
-renderCarrinho();
-
-alert("Venda finalizada");
-
-}
-
-
-
-/* ========================== */
-/* MESAS / COMANDAS */
-/* ========================== */
-
-let mesasAbertas = [];
-let mesaSelecionada = null;
 
 window.alternarModoPdv = (modo)=>{
   const balcao = document.getElementById("modoBalcao");
@@ -1055,13 +294,12 @@ window.alternarModoPdv = (modo)=>{
   if(modo === "mesas"){
     balcao.classList.add("hidden");
     mesas.classList.remove("hidden");
-    btnB.classList.remove("ativo");
     btnM.classList.add("ativo");
+    btnB.classList.remove("ativo");
     carregarMesas();
-    renderProdutosMesa();
   }else{
-    balcao.classList.remove("hidden");
     mesas.classList.add("hidden");
+    balcao.classList.remove("hidden");
     btnB.classList.add("ativo");
     btnM.classList.remove("ativo");
   }
@@ -1071,7 +309,7 @@ async function carregarMesas(){
   const snap = await getDocs(query(collection(db,"comandas"), where("aberta","==",true)));
   mesasAbertas = [];
   snap.forEach((d)=>mesasAbertas.push({ id:d.id, ...d.data() }));
-  mesasAbertas.sort((a,b)=>Number(a.numeroMesa||0)-Number(b.numeroMesa||0));
+  mesasAbertas.sort((a,b)=>Number(a.numeroMesa || 0) - Number(b.numeroMesa || 0));
   renderMesas();
 }
 
@@ -1082,21 +320,37 @@ function renderMesas(){
 
   if(!mesasAbertas.length){
     lista.innerHTML = "<p>Nenhuma mesa aberta.</p>";
+    renderMesaDetalhe();
     return;
   }
 
   mesasAbertas.forEach((m)=>{
-    const btn = document.createElement("button");
-    btn.className = `mesaCard ${mesaSelecionada?.id === m.id ? "ativa" : ""}`;
-    btn.innerHTML = `<span>Mesa ${m.numeroMesa}</span><strong>R$ ${Number(m.total || 0).toFixed(2)}</strong>`;
-    btn.onclick = ()=>{ mesaSelecionada = m; renderMesas(); renderMesaDetalhe(); };
-    lista.appendChild(btn);
+    const b = document.createElement("button");
+    b.className = `mesaCard ${mesaSelecionada?.id === m.id ? "ativa" : ""}`;
+    b.innerHTML = `<span>Mesa ${m.numeroMesa}</span><strong>R$ ${Number(m.total || 0).toFixed(2)}</strong>`;
+    b.onclick = ()=>{
+      mesaSelecionada = m;
+      renderMesas();
+      renderMesaDetalhe();
+    };
+    lista.appendChild(b);
   });
+
+  renderMesaDetalhe();
 }
 
-window.abrirMesa = async ()=>{
-  const numero = Number(document.getElementById("numeroMesa").value);
-  if(!numero){ alert("Informe o número da mesa"); return; }
+window.abrirMesa = async()=>{
+  const numero = Number(document.getElementById("numeroMesa")?.value);
+  if(!numero){
+    alert("Informe o número da mesa.");
+    return;
+  }
+
+  const existe = mesasAbertas.find((m)=>Number(m.numeroMesa) === numero);
+  if(existe){
+    alert("Essa mesa já está aberta.");
+    return;
+  }
 
   await addDoc(collection(db,"comandas"), {
     numeroMesa: numero,
@@ -1107,72 +361,68 @@ window.abrirMesa = async ()=>{
   });
 
   document.getElementById("numeroMesa").value = "";
-  carregarMesas();
+  await carregarMesas();
 };
 
 function renderProdutosMesa(){
   const div = document.getElementById("produtosMesa");
   if(!div) return;
+
+  const filtrados = getProdutosFiltrados();
   div.innerHTML = "";
-  listaProdutos.forEach((p)=>{
+
+  filtrados.forEach((p)=>{
     const b = document.createElement("button");
-    b.innerHTML = `<span>${p.nome}</span><strong>R$ ${Number(p.preco).toFixed(2)}</strong>`;
-    b.onclick = ()=>adicionarProdutoMesa(p);
+    b.innerHTML = `<span>${p.nome}</span><strong>R$ ${p.preco.toFixed(2)}</strong>`;
+    b.onclick = ()=> adicionarProdutoMesa(p);
     div.appendChild(b);
   });
 }
 
 async function adicionarProdutoMesa(produto){
-  if(!mesaSelecionada){ alert("Selecione uma mesa primeiro"); return; }
+  if(!mesaSelecionada){
+    alert("Selecione uma mesa.");
+    return;
+  }
 
   const itens = Array.isArray(mesaSelecionada.itens) ? [...mesaSelecionada.itens] : [];
   const idx = itens.findIndex((i)=>i.idProduto === produto.id);
-  if(idx >= 0) itens[idx].quantidade += 1;
-  else itens.push({ idProduto: produto.id, nome: produto.nome, preco: Number(produto.preco), quantidade: 1 });
 
-  const totalMesa = itens.reduce((s,i)=>s + Number(i.preco || 0) * Number(i.quantidade || 0),0);
-  await updateDoc(doc(db,"comandas",mesaSelecionada.id), { itens, total: totalMesa });
+  if(idx >= 0){
+    itens[idx].quantidade += 1;
+  }else{
+    itens.push({
+      idProduto: produto.id,
+      nome: produto.nome,
+      preco: Number(produto.preco),
+      quantidade: 1
+    });
+  }
+
+  const totalMesa = itens.reduce((s,i)=> s + Number(i.preco || 0) * Number(i.quantidade || 0),0);
+
+  await updateDoc(doc(db,"comandas",mesaSelecionada.id), {
+    itens,
+    total: totalMesa
+  });
+
   mesaSelecionada = { ...mesaSelecionada, itens, total: totalMesa };
-  carregarMesas();
+  await carregarMesas();
   renderMesaDetalhe();
 }
 
-window.fecharMesaSelecionada = async ()=>{
-  if(!mesaSelecionada){ alert("Selecione uma mesa"); return; }
-  if(!caixaAberto){ alert("Abra o caixa antes de fechar mesa"); return; }
+window.removerItemMesa = async(idProduto)=>{
+  if(!mesaSelecionada) return;
 
-  const pagamentos = [{ tipo: document.getElementById("pagamentoMesa").value, valor: Number(mesaSelecionada.total || 0) }];
-  const itens = (mesaSelecionada.itens || []).map((i)=>({
-    idProduto: i.idProduto,
-    nome: i.nome,
-    preco: Number(i.preco),
-    quantidade: Number(i.quantidade || 1)
-  }));
+  const itens = (mesaSelecionada.itens || [])
+    .map((i)=> i.idProduto === idProduto ? { ...i, quantidade: Number(i.quantidade) - 1 } : i)
+    .filter((i)=>Number(i.quantidade) > 0);
 
-  await addDoc(collection(db,"vendas"), {
-    criadoEm:new Date(),
-    pagamentos,
-    troco:0,
-    idCaixa:caixaId,
-    idUsuario:usuario.nome,
-    nomeUsuario:usuario.nome,
-    itens,
-    subtotal:Number(mesaSelecionada.total || 0),
-    total:Number(mesaSelecionada.total || 0),
-    tipo:"mesa",
-    mesaNumero: mesaSelecionada.numeroMesa,
-    status:"finalizado"
-  });
+  const totalMesa = itens.reduce((s,i)=> s + Number(i.preco || 0) * Number(i.quantidade || 0),0);
 
-  const caixaRef=doc(db,"caixa",caixaId);
-  const caixaSnap=await getDoc(caixaRef);
-  await updateDoc(caixaRef,{ saldoAtual:Number(caixaSnap.data().saldoAtual || 0) + Number(mesaSelecionada.total || 0) });
-
-  await updateDoc(doc(db,"comandas",mesaSelecionada.id), { aberta:false, fechadaEm: new Date(), formaPagamento: pagamentos[0].tipo });
-
-  alert(`Mesa ${mesaSelecionada.numeroMesa} fechada com sucesso!`);
-  mesaSelecionada = null;
-  carregarMesas();
+  await updateDoc(doc(db,"comandas",mesaSelecionada.id), { itens, total: totalMesa });
+  mesaSelecionada = { ...mesaSelecionada, itens, total: totalMesa };
+  await carregarMesas();
   renderMesaDetalhe();
 };
 
@@ -1182,117 +432,103 @@ function renderMesaDetalhe(){
   if(!titulo || !itensDiv) return;
 
   if(!mesaSelecionada){
-    titulo.innerText = "Selecione uma mesa";
-    itensDiv.innerHTML = "";
+    titulo.textContent = "Selecione uma mesa";
+    itensDiv.innerHTML = "<p>Nenhum item adicionado.</p>";
     return;
   }
 
-  titulo.innerText = `Mesa ${mesaSelecionada.numeroMesa} • Total R$ ${Number(mesaSelecionada.total || 0).toFixed(2)}`;
+  titulo.textContent = `Mesa ${mesaSelecionada.numeroMesa} • R$ ${Number(mesaSelecionada.total || 0).toFixed(2)}`;
   const itens = mesaSelecionada.itens || [];
-  itensDiv.innerHTML = itens.length ? itens.map((i)=>`<p>${i.quantidade}x ${i.nome} • R$ ${(Number(i.preco)*Number(i.quantidade)).toFixed(2)}</p>`).join("") : "<p>Nenhum item adicionado.</p>";
+
+  if(!itens.length){
+    itensDiv.innerHTML = "<p>Nenhum item adicionado.</p>";
+    return;
+  }
+
+  itensDiv.innerHTML = itens.map((i)=>`
+    <div class="mesaItemLinha">
+      <div>
+        <strong>${i.nome}</strong><br>
+        <small>Qtd: ${i.quantidade}</small>
+      </div>
+      <div>
+        <strong>R$ ${(Number(i.preco) * Number(i.quantidade)).toFixed(2)}</strong>
+        <button onclick="removerItemMesa('${i.idProduto}')">Remover</button>
+      </div>
+    </div>
+  `).join("");
 }
 
-window.toggleMenu = ()=>{
+window.fecharMesaSelecionada = async()=>{
+  if(!mesaSelecionada){
+    alert("Selecione uma mesa.");
+    return;
+  }
 
-const menu = document.getElementById("menuMobile");
+  if(!caixaAberto || !caixaId){
+    alert("Abra o caixa antes de fechar a mesa.");
+    return;
+  }
 
-menu.classList.toggle("ativo");
+  const forma = document.getElementById("pagamentoMesa")?.value || "dinheiro";
+  const totalMesa = Number(mesaSelecionada.total || 0);
 
+  if(totalMesa <= 0){
+    alert("Mesa sem itens.");
+    return;
+  }
+
+  const itens = (mesaSelecionada.itens || []).map((i)=>(
+    {
+      idProduto: i.idProduto,
+      nome: i.nome,
+      preco: Number(i.preco),
+      quantidade: Number(i.quantidade)
+    }
+  ));
+
+  await addDoc(collection(db,"vendas"), {
+    criadoEm: new Date(),
+    pagamentos: [{ tipo: forma, valor: totalMesa }],
+    troco: 0,
+    idCaixa: caixaId,
+    idUsuario: usuario.nome,
+    nomeUsuario: usuario.nome,
+    cliente: `Mesa ${mesaSelecionada.numeroMesa}`,
+    itens,
+    subtotal: totalMesa,
+    total: totalMesa,
+    tipo: "mesa",
+    mesaNumero: mesaSelecionada.numeroMesa,
+    status: "finalizado"
+  });
+
+  const caixaRef = doc(db,"caixa",caixaId);
+  const caixaSnap = await getDoc(caixaRef);
+  const saldoAtual = Number(caixaSnap.data()?.saldoAtual || 0);
+  await updateDoc(caixaRef,{ saldoAtual: saldoAtual + totalMesa });
+
+  await updateDoc(doc(db,"comandas",mesaSelecionada.id), {
+    aberta: false,
+    fechadaEm: new Date(),
+    formaPagamento: forma
+  });
+
+  alert(`Mesa ${mesaSelecionada.numeroMesa} fechada com sucesso.`);
+  mesaSelecionada = null;
+  await carregarMesas();
 };
 
-function mostrarLoading(){
-const div = document.createElement("div");
-div.className = "loading";
-div.id = "loading";
-
-div.innerHTML = `<div class="spinner"></div>`;
-
-document.body.appendChild(div);
-}
-
-function esconderLoading(){
-document.getElementById("loading")?.remove();
-}
-
-window.trocarTela = (tela)=>{
-
-document.querySelector(".areaProdutos").style.display = "none";
-document.querySelector(".caixa").style.display = "none";
-
-if(tela === "produtos"){
-document.querySelector(".areaProdutos").style.display = "block";
-}
-
-if(tela === "carrinho"){
-document.querySelector(".caixa").style.display = "block";
-document.querySelector(".pagamentos").style.display = "none";
-}
-
-if(tela === "pagamento"){
-document.querySelector(".caixa").style.display = "block";
-document.querySelector(".pagamentos").style.display = "grid";
-}
-
+window.filtrarProdutos = ()=>{
+  renderProdutos();
+  renderProdutosMesa();
 };
 
-function renderCategorias(){
-
-const categorias = [...new Set(listaProdutos.map(p=>p.categoria || "outros"))];
-
-const div = document.getElementById("categorias");
-
-div.innerHTML = `
-<button onclick="filtrarCategoria('todas', event)">
-🧾 Todas
-</button>
-`;
-
-categorias.forEach(cat=>{
-
-const icone = iconesCategorias[cat] || "📦";
-
-div.innerHTML += `
-<button onclick="filtrarCategoria('${cat}', event)">
-${icone} ${cat}
-</button>
-`;
-
-});
-
+async function iniciar(){
+  await carregarCaixaAberto();
+  await carregarProdutos();
+  await carregarMesas();
+  renderCarrinho();
 }
 
-window.filtrarCategoria = (cat)=>{
-
-if(cat === "todas"){
-renderProdutos(listaProdutos);
-return;
-}
-
-const filtrados = listaProdutos.filter(p=>p.categoria === cat);
-
-renderProdutos(filtrados);
-
-};
-
-const iconesCategorias = {
-acai: "🍓",
-bebidas: "🥤",
-combos: "🍔",
-sobremesa: "🍰",
-outros: "📦"
-};
-
-window.filtrarCategoria = (cat, ev)=>{
-if(ev){
-  document.querySelectorAll(".categorias button").forEach(b=>b.classList.remove("ativa"));
-  ev.currentTarget.classList.add("ativa");
-}
-
-if(cat === "todas"){
-  renderProdutos(listaProdutos);
-  return;
-}
-
-const filtrados = listaProdutos.filter(p=>p.categoria === cat);
-renderProdutos(filtrados);
-};
+iniciar();

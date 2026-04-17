@@ -19,7 +19,7 @@
         <a href="pdv.html"><i class="fa-solid fa-cash-register"></i> PDV</a>
         <a href="caixa.html" class="ativo"><i class="fa-solid fa-vault"></i> Caixa</a>
         <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
-        <a href="entregador.html" data-only-admin><i class="fa-solid fa-motorcycle"></i> Entregas</a>
+        <a href="entregador.html"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
         <a href="historico.html" data-only-admin><i class="fa-solid fa-clock-rotate-left"></i> Histórico</a>
       </nav>
 
@@ -51,5 +51,6 @@
 
   <script type="module" src="../js/caixaControle.js"></script>
   <script type="module" src="../js/auth.js"></script>
+  <script type="module">import { aplicarUsuarioLogado } from "../js/layout.js"; aplicarUsuarioLogado();</script>
 </body>
 </html>

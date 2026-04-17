@@ -1,77 +1,51 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Entregas - Açaí do Rapha</title>
-
+<link rel="stylesheet" href="../css/dashboard.css">
 <link rel="stylesheet" href="../css/entregador.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
-
 </head>
-
 <body>
+  <div class="layoutAdmin">
+    <aside class="sidebarAdmin">
+      <h2>Painel</h2>
+      <p class="sidebarUser" data-usuario-logado></p>
+      <nav>
+        <a href="dashboard.html" data-only-admin><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="pdv.html"><i class="fa-solid fa-cash-register"></i> PDV</a>
+        <a href="caixa.html"><i class="fa-solid fa-vault"></i> Caixa</a>
+        <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
+        <a href="entregador.html" class="ativo"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
+        <a href="historico.html" data-only-admin><i class="fa-solid fa-clock-rotate-left"></i> Histórico</a>
+      </nav>
+      <a class="sidebarAction suporte" href="https://wa.me/11987293823" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i> Solicitar suporte</a>
+      <button id="logout" class="sidebarAction sair">Sair</button>
+    </aside>
 
-<header class="topBar">
+    <main class="conteudoAdmin entregasPage">
+      <header class="topoEntregas">
+        <h1>Entregas</h1>
+        <div class="filtrosEntrega">
+          <button onclick="filtroProntas()">Prontas para entrega</button>
+          <button onclick="filtroConcluidas()">Concluídas</button>
+        </div>
+      </header>
 
-<div class="logoArea">
-
-<img src="../img/Logo.png">
-<span>Entregador Açaí do Rapha</span>
-
-</div>
-
-<div class="menuArea">
-
-<span id="usuarioLogado"></span>
-
-<div id="menuAdmin" class="menuAdmin hidden">
-
-<button onclick="irDashboard()">Dashboard</button>
-<button onclick="irPDV()">PDV</button>
-<button onclick="irProdutos()">Produtos</button>
-
-</div>
-
-<button onclick="logout()">Sair</button>
-
-</div>
-
-</header>
-
-<div class="container">
-
-<div id="mapa"></div>
-
-<div class="entregasContainer">
-
-<h2>Pedidos para entrega</h2>
-
-<div class="filtrosEntrega">
-
-<button onclick="filtroProntas()">
-Prontas para entrega
-</button>
-
-<button onclick="filtroConcluidas()">
-Concluídas
-</button>
-
-</div>
-
-<div id="listaEntregas"></div>
-
-</div>
-
-</div>
+      <section class="entregasGrid">
+        <div id="listaEntregas" class="entregasContainer"></div>
+        <div id="mapa" class="mapaEntrega"></div>
+      </section>
+    </main>
+  </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script type="module" src="../js/entregador.js"></script>
 <script type="module" src="../js/auth.js"></script>
-
+<script type="module">import { aplicarUsuarioLogado } from "../js/layout.js"; aplicarUsuarioLogado();</script>
 </body>
 </html>
