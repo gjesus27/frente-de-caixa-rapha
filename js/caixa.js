@@ -27,38 +27,55 @@ let caixaAberto = false;
 
 let mesasAbertas = [];
 let mesaSelecionada = null;
-const formatarMoeda = (valor)=>`R$ ${Number(valor || 0).toFixed(2)}`;
+
+const formatarMoeda = (valor) => `R$ ${Number(valor || 0).toFixed(2)}`;
 
 const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
-if(!usuario){
+if (!usuario) {
   window.location.href = "login.html";
 }
 
-async function carregarCaixaAberto(){
+function otimizarImagem(url, largura = 250) {
+  if (!url) return "https://via.placeholder.com/120";
+  if (!url.includes("res.cloudinary.com")) return url;
+
+  return url.replace(
+    "/image/upload/",
+    `/image/upload/f_auto,q_auto,w_${largura},c_limit/`
+  );
+}
+
+async function carregarCaixaAberto() {
   const q = query(
-    collection(db,"caixa"),
-    where("usuario","==",usuario.nome),
-    where("aberto","==",true)
+    collection(db, "caixa"),
+    where("usuario", "==", usuario.nome),
+    where("aberto", "==", true)
   );
 
   const snapshot = await getDocs(q);
 
-  if(snapshot.empty){
+  if (snapshot.empty) {
     alert("Abra o caixa na tela de Caixa antes de vender.");
     caixaAberto = false;
     return;
   }
 
-  snapshot.forEach((d)=>{ caixaId = d.id; });
+  snapshot.forEach((d) => {
+    caixaId = d.id;
+  });
+
   caixaAberto = true;
 }
 
-async function carregarProdutos(){
-  const snapshot = await getDocs(collection(db,"produtos"));
+async function carregarProdutos() {
+  const snapshot = await getDocs(collection(db, "produtos"));
   listaProdutos = [];
 
-  snapshot.forEach((docSnap)=>{
+  snapshot.forEach((docSnap) => {
     const p = docSnap.data();
+
+    if (p.ativo === false) return;
+
     listaProdutos.push({
       id: docSnap.id,
       nome: p.nome || "Produto sem nome",
@@ -69,94 +86,123 @@ async function carregarProdutos(){
     });
   });
 
-  listaProdutos.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+  listaProdutos.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   renderCategorias();
   renderProdutos();
   renderProdutosMesa();
 }
 
-function getProdutosFiltrados(){
+function getProdutosFiltrados() {
   const termo = (pesquisaInput?.value || "").trim().toLowerCase();
-  return listaProdutos.filter((p)=>{
+
+  return listaProdutos.filter((p) => {
     const byNome = p.nome.toLowerCase().includes(termo);
-    const byCategoria = categoriaSelecionada === "todas" || p.categoria === categoriaSelecionada;
+    const byCategoria =
+      categoriaSelecionada === "todas" || p.categoria === categoriaSelecionada;
+
     return byNome && byCategoria;
   });
 }
 
-function renderProdutos(){
-  if(!produtosDiv) return;
+function renderProdutos() {
+  if (!produtosDiv) return;
+
   const filtrados = getProdutosFiltrados();
   produtosDiv.innerHTML = "";
 
-  if(!filtrados.length){
+  if (!filtrados.length) {
     produtosDiv.innerHTML = "<p>Nenhum produto encontrado.</p>";
     return;
   }
 
-  filtrados.forEach((p)=>{
+  filtrados.forEach((p) => {
     const card = document.createElement("button");
     card.className = "produto";
+
+    const imagemOtimizada = otimizarImagem(p.imagem, 250);
+
     card.innerHTML = `
-      <img src="${p.imagem}" alt="${p.nome}">
+      <img 
+        src="${imagemOtimizada}" 
+        alt="${p.nome}" 
+        loading="lazy"
+        decoding="async"
+        onerror="this.src='https://via.placeholder.com/120'"
+      >
       <h4>${p.nome}</h4>
       <p>R$ ${p.preco.toFixed(2)}</p>
       <small>Estoque: ${p.estoque}</small>
     `;
-    card.onclick = ()=> adicionarAoCarrinho(p);
+
+    card.onclick = () => adicionarAoCarrinho(p);
     produtosDiv.appendChild(card);
   });
 }
 
-function renderCategorias(){
-  if(!categoriasDiv) return;
+function renderCategorias() {
+  if (!categoriasDiv) return;
 
-  const categorias = ["todas", ...new Set(listaProdutos.map((p)=>p.categoria || "outros"))];
+  const categorias = ["todas", ...new Set(listaProdutos.map((p) => p.categoria || "outros"))];
   categoriasDiv.innerHTML = "";
 
-  categorias.forEach((cat)=>{
+  categorias.forEach((cat) => {
     const b = document.createElement("button");
     b.textContent = cat === "todas" ? "🧾 Todas" : cat;
-    if(cat === categoriaSelecionada) b.classList.add("ativa");
-    b.onclick = ()=>{
+
+    if (cat === categoriaSelecionada) b.classList.add("ativa");
+
+    b.onclick = () => {
       categoriaSelecionada = cat;
       renderCategorias();
       renderProdutos();
       renderProdutosMesa();
     };
+
     categoriasDiv.appendChild(b);
   });
 }
 
-function adicionarAoCarrinho(produto){
-  const existente = carrinho.find((item)=>item.id === produto.id);
-  if(existente){
+function adicionarAoCarrinho(produto) {
+  const existente = carrinho.find((item) => item.id === produto.id);
+
+  if (existente) {
     existente.quantidade += 1;
-  }else{
+  } else {
     carrinho.push({ ...produto, quantidade: 1 });
   }
+
   renderCarrinho();
 }
 
-function alterarQuantidade(id, delta){
+function alterarQuantidade(id, delta) {
   carrinho = carrinho
-    .map((item)=> item.id === id ? { ...item, quantidade: item.quantidade + delta } : item)
-    .filter((item)=> item.quantidade > 0);
+    .map((item) =>
+      item.id === id
+        ? { ...item, quantidade: item.quantidade + delta }
+        : item
+    )
+    .filter((item) => item.quantidade > 0);
+
   renderCarrinho();
 }
 
-function renderCarrinho(){
-  if(!carrinhoDiv) return;
+function renderCarrinho() {
+  if (!carrinhoDiv) return;
 
-  total = carrinho.reduce((acc,item)=> acc + (item.preco * item.quantidade),0);
+  total = carrinho.reduce(
+    (acc, item) => acc + item.preco * item.quantidade,
+    0
+  );
+
   carrinhoDiv.innerHTML = "";
 
-  if(!carrinho.length){
+  if (!carrinho.length) {
     carrinhoDiv.innerHTML = "<p>Carrinho vazio.</p>";
-  }else{
-    carrinho.forEach((item)=>{
+  } else {
+    carrinho.forEach((item) => {
       const row = document.createElement("div");
       row.className = "item";
+
       row.innerHTML = `
         <div>
           <div class="itemNome">${item.nome}</div>
@@ -170,9 +216,11 @@ function renderCarrinho(){
         <div class="itemTotal">R$ ${(item.preco * item.quantidade).toFixed(2)}</div>
       `;
 
-      row.querySelectorAll("button").forEach((btn)=>{
-        btn.onclick = ()=>alterarQuantidade(item.id, Number(btn.dataset.delta));
+      row.querySelectorAll("button").forEach((btn) => {
+        btn.onclick = () =>
+          alterarQuantidade(item.id, Number(btn.dataset.delta));
       });
+
       carrinhoDiv.appendChild(row);
     });
   }
@@ -180,8 +228,8 @@ function renderCarrinho(){
   totalSpan.textContent = formatarMoeda(total);
 }
 
-window.imprimirReciboPedido = ()=>{
-  if(!carrinho.length){
+window.imprimirReciboPedido = () => {
+  if (!carrinho.length) {
     alert("Adicione itens no carrinho para emitir o recibo.");
     return;
   }
@@ -192,9 +240,13 @@ window.imprimirReciboPedido = ()=>{
   const dataHora = new Date().toLocaleString("pt-BR");
   const logoUrl = new URL("../img/Logo.png", window.location.href).href;
   const numeroPedido = `PDV-${Date.now().toString().slice(-6)}`;
-  const linhasItens = carrinho.map((item, index)=>{
-    const subtotalItem = Number(item.preco || 0) * Number(item.quantidade || 0);
-    return `
+
+  const linhasItens = carrinho
+    .map((item, index) => {
+      const subtotalItem =
+        Number(item.preco || 0) * Number(item.quantidade || 0);
+
+      return `
       <tr>
         <td>${index + 1}</td>
         <td>${item.id}</td>
@@ -204,7 +256,8 @@ window.imprimirReciboPedido = ()=>{
         <td>${formatarMoeda(subtotalItem)}</td>
       </tr>
     `;
-  }).join("");
+    })
+    .join("");
 
   const htmlCupom = `
     <!DOCTYPE html>
@@ -324,36 +377,35 @@ window.imprimirReciboPedido = ()=>{
   `;
 
   const janela = window.open("", "_blank", "width=480,height=720");
-  if(!janela){
+  if (!janela) {
     alert("Não foi possível abrir a janela de impressão.");
     return;
   }
+
   janela.document.open();
   janela.document.write(htmlCupom);
   janela.document.close();
 };
 
-async function finalizarVendaCompleta(pagamentos, troco = 0){
-  if(!caixaAberto || !caixaId){
+async function finalizarVendaCompleta(pagamentos, troco = 0) {
+  if (!caixaAberto || !caixaId) {
     alert("Abra o caixa antes de vender.");
     return;
   }
 
-  if(!carrinho.length){
+  if (!carrinho.length) {
     alert("Carrinho vazio.");
     return;
   }
 
-  const itens = carrinho.map((p)=>(
-    {
-      idProduto: p.id,
-      nome: p.nome,
-      preco: Number(p.preco),
-      quantidade: Number(p.quantidade)
-    }
-  ));
+  const itens = carrinho.map((p) => ({
+    idProduto: p.id,
+    nome: p.nome,
+    preco: Number(p.preco),
+    quantidade: Number(p.quantidade)
+  }));
 
-  await addDoc(collection(db,"vendas"),{
+  await addDoc(collection(db, "vendas"), {
     criadoEm: new Date(),
     pagamentos,
     troco,
@@ -368,70 +420,92 @@ async function finalizarVendaCompleta(pagamentos, troco = 0){
     status: "finalizado"
   });
 
-  const caixaRef = doc(db,"caixa",caixaId);
+  const caixaRef = doc(db, "caixa", caixaId);
   const caixaSnap = await getDoc(caixaRef);
   const saldoAtual = Number(caixaSnap.data()?.saldoAtual || 0);
-  await updateDoc(caixaRef,{ saldoAtual: saldoAtual + total });
 
-  for(const item of carrinho){
-    const pRef = doc(db,"produtos",item.id);
-    const produtoAtual = listaProdutos.find((p)=>p.id === item.id);
-    if(!produtoAtual) continue;
-    const novoEstoque = Math.max(0, Number(produtoAtual.estoque || 0) - Number(item.quantidade || 0));
-    await updateDoc(pRef,{ estoque: novoEstoque });
+  await updateDoc(caixaRef, { saldoAtual: saldoAtual + total });
+
+  for (const item of carrinho) {
+    const pRef = doc(db, "produtos", item.id);
+    const produtoAtual = listaProdutos.find((p) => p.id === item.id);
+    if (!produtoAtual) continue;
+
+    const novoEstoque = Math.max(
+      0,
+      Number(produtoAtual.estoque || 0) - Number(item.quantidade || 0)
+    );
+
+    await updateDoc(pRef, { estoque: novoEstoque });
   }
 
   alert("Venda finalizada com sucesso.");
   carrinho = [];
-  if(nomeClienteInput) nomeClienteInput.value = "";
+
+  if (nomeClienteInput) nomeClienteInput.value = "";
+
   await carregarProdutos();
   renderCarrinho();
 }
 
-window.pagarSimples = async(tipo)=>{
-  if(total <= 0){
+window.pagarSimples = async (tipo) => {
+  if (total <= 0) {
     alert("Carrinho vazio.");
     return;
   }
 
-  if(tipo === "dinheiro"){
-    const recebido = Number(prompt(`Total R$ ${total.toFixed(2)}\nValor recebido em dinheiro:`));
-    if(!recebido){
+  if (tipo === "dinheiro") {
+    const recebido = Number(
+      prompt(`Total R$ ${total.toFixed(2)}\nValor recebido em dinheiro:`)
+    );
+
+    if (!recebido) {
       alert("Pagamento cancelado.");
       return;
     }
-    if(recebido < total){
+
+    if (recebido < total) {
       alert("Valor recebido é menor que o total.");
       return;
     }
-    await finalizarVendaCompleta([{ tipo:"dinheiro", valor: total }], recebido - total);
+
+    await finalizarVendaCompleta(
+      [{ tipo: "dinheiro", valor: total }],
+      recebido - total
+    );
     return;
   }
 
-  await finalizarVendaCompleta([{ tipo, valor: total }],0);
+  await finalizarVendaCompleta([{ tipo, valor: total }], 0);
 };
 
-window.abrirPagamentoMisto = async()=>{
-  if(total <= 0){
+window.abrirPagamentoMisto = async () => {
+  if (total <= 0) {
     alert("Carrinho vazio.");
     return;
   }
 
-  const entrada = prompt("Pagamento misto. Digite no formato pix:20,dinheiro:10");
-  if(!entrada) return;
+  const entrada = prompt(
+    "Pagamento misto. Digite no formato pix:20,dinheiro:10"
+  );
+  if (!entrada) return;
 
   const pagamentos = entrada
     .split(",")
-    .map((item)=>item.trim())
+    .map((item) => item.trim())
     .filter(Boolean)
-    .map((item)=>{
+    .map((item) => {
       const [tipo, valor] = item.split(":");
-      return { tipo: (tipo || "").trim().toLowerCase(), valor: Number(valor || 0) };
+      return {
+        tipo: (tipo || "").trim().toLowerCase(),
+        valor: Number(valor || 0)
+      };
     })
-    .filter((p)=>p.tipo && p.valor > 0);
+    .filter((p) => p.tipo && p.valor > 0);
 
-  const pago = pagamentos.reduce((s,p)=>s + p.valor,0);
-  if(pago < total){
+  const pago = pagamentos.reduce((s, p) => s + p.valor, 0);
+
+  if (pago < total) {
     alert("Valor pago menor que o total.");
     return;
   }
@@ -439,19 +513,19 @@ window.abrirPagamentoMisto = async()=>{
   await finalizarVendaCompleta(pagamentos, pago - total);
 };
 
-window.alternarModoPdv = (modo)=>{
+window.alternarModoPdv = (modo) => {
   const balcao = document.getElementById("modoBalcao");
   const mesas = document.getElementById("modoMesas");
   const btnB = document.getElementById("btnModoBalcao");
   const btnM = document.getElementById("btnModoMesas");
 
-  if(modo === "mesas"){
+  if (modo === "mesas") {
     balcao.classList.add("hidden");
     mesas.classList.remove("hidden");
     btnM.classList.add("ativo");
     btnB.classList.remove("ativo");
     carregarMesas();
-  }else{
+  } else {
     mesas.classList.add("hidden");
     balcao.classList.remove("hidden");
     btnB.classList.add("ativo");
@@ -459,54 +533,67 @@ window.alternarModoPdv = (modo)=>{
   }
 };
 
-async function carregarMesas(){
-  const snap = await getDocs(query(collection(db,"comandas"), where("aberta","==",true)));
+async function carregarMesas() {
+  const snap = await getDocs(
+    query(collection(db, "comandas"), where("aberta", "==", true))
+  );
+
   mesasAbertas = [];
-  snap.forEach((d)=>mesasAbertas.push({ id:d.id, ...d.data() }));
-  mesasAbertas.sort((a,b)=>Number(a.numeroMesa || 0) - Number(b.numeroMesa || 0));
+  snap.forEach((d) => mesasAbertas.push({ id: d.id, ...d.data() }));
+  mesasAbertas.sort(
+    (a, b) => Number(a.numeroMesa || 0) - Number(b.numeroMesa || 0)
+  );
+
   renderMesas();
 }
 
-function renderMesas(){
+function renderMesas() {
   const lista = document.getElementById("listaMesas");
-  if(!lista) return;
+  if (!lista) return;
+
   lista.innerHTML = "";
 
-  if(!mesasAbertas.length){
+  if (!mesasAbertas.length) {
     lista.innerHTML = "<p>Nenhuma mesa aberta.</p>";
     renderMesaDetalhe();
     return;
   }
 
-  mesasAbertas.forEach((m)=>{
+  mesasAbertas.forEach((m) => {
     const b = document.createElement("button");
     b.className = `mesaCard ${mesaSelecionada?.id === m.id ? "ativa" : ""}`;
-    b.innerHTML = `<span>Mesa ${m.numeroMesa}</span><strong>R$ ${Number(m.total || 0).toFixed(2)}</strong>`;
-    b.onclick = ()=>{
+    b.innerHTML = `<span>Mesa ${m.numeroMesa}</span><strong>R$ ${Number(
+      m.total || 0
+    ).toFixed(2)}</strong>`;
+
+    b.onclick = () => {
       mesaSelecionada = m;
       renderMesas();
       renderMesaDetalhe();
     };
+
     lista.appendChild(b);
   });
 
   renderMesaDetalhe();
 }
 
-window.abrirMesa = async()=>{
+window.abrirMesa = async () => {
   const numero = Number(document.getElementById("numeroMesa")?.value);
-  if(!numero){
+
+  if (!numero) {
     alert("Informe o número da mesa.");
     return;
   }
 
-  const existe = mesasAbertas.find((m)=>Number(m.numeroMesa) === numero);
-  if(existe){
+  const existe = mesasAbertas.find((m) => Number(m.numeroMesa) === numero);
+
+  if (existe) {
     alert("Essa mesa já está aberta.");
     return;
   }
 
-  await addDoc(collection(db,"comandas"), {
+  await addDoc(collection(db, "comandas"), {
     numeroMesa: numero,
     aberta: true,
     criadoEm: new Date(),
@@ -518,33 +605,36 @@ window.abrirMesa = async()=>{
   await carregarMesas();
 };
 
-function renderProdutosMesa(){
+function renderProdutosMesa() {
   const div = document.getElementById("produtosMesa");
-  if(!div) return;
+  if (!div) return;
 
   const filtrados = getProdutosFiltrados();
   div.innerHTML = "";
 
-  filtrados.forEach((p)=>{
+  filtrados.forEach((p) => {
     const b = document.createElement("button");
     b.innerHTML = `<span>${p.nome}</span><strong>R$ ${p.preco.toFixed(2)}</strong>`;
-    b.onclick = ()=> adicionarProdutoMesa(p);
+    b.onclick = () => adicionarProdutoMesa(p);
     div.appendChild(b);
   });
 }
 
-async function adicionarProdutoMesa(produto){
-  if(!mesaSelecionada){
+async function adicionarProdutoMesa(produto) {
+  if (!mesaSelecionada) {
     alert("Selecione uma mesa.");
     return;
   }
 
-  const itens = Array.isArray(mesaSelecionada.itens) ? [...mesaSelecionada.itens] : [];
-  const idx = itens.findIndex((i)=>i.idProduto === produto.id);
+  const itens = Array.isArray(mesaSelecionada.itens)
+    ? [...mesaSelecionada.itens]
+    : [];
 
-  if(idx >= 0){
+  const idx = itens.findIndex((i) => i.idProduto === produto.id);
+
+  if (idx >= 0) {
     itens[idx].quantidade += 1;
-  }else{
+  } else {
     itens.push({
       idProduto: produto.id,
       nome: produto.nome,
@@ -553,9 +643,12 @@ async function adicionarProdutoMesa(produto){
     });
   }
 
-  const totalMesa = itens.reduce((s,i)=> s + Number(i.preco || 0) * Number(i.quantidade || 0),0);
+  const totalMesa = itens.reduce(
+    (s, i) => s + Number(i.preco || 0) * Number(i.quantidade || 0),
+    0
+  );
 
-  await updateDoc(doc(db,"comandas",mesaSelecionada.id), {
+  await updateDoc(doc(db, "comandas", mesaSelecionada.id), {
     itens,
     total: totalMesa
   });
@@ -565,41 +658,57 @@ async function adicionarProdutoMesa(produto){
   renderMesaDetalhe();
 }
 
-window.removerItemMesa = async(idProduto)=>{
-  if(!mesaSelecionada) return;
+window.removerItemMesa = async (idProduto) => {
+  if (!mesaSelecionada) return;
 
   const itens = (mesaSelecionada.itens || [])
-    .map((i)=> i.idProduto === idProduto ? { ...i, quantidade: Number(i.quantidade) - 1 } : i)
-    .filter((i)=>Number(i.quantidade) > 0);
+    .map((i) =>
+      i.idProduto === idProduto
+        ? { ...i, quantidade: Number(i.quantidade) - 1 }
+        : i
+    )
+    .filter((i) => Number(i.quantidade) > 0);
 
-  const totalMesa = itens.reduce((s,i)=> s + Number(i.preco || 0) * Number(i.quantidade || 0),0);
+  const totalMesa = itens.reduce(
+    (s, i) => s + Number(i.preco || 0) * Number(i.quantidade || 0),
+    0
+  );
 
-  await updateDoc(doc(db,"comandas",mesaSelecionada.id), { itens, total: totalMesa });
+  await updateDoc(doc(db, "comandas", mesaSelecionada.id), {
+    itens,
+    total: totalMesa
+  });
+
   mesaSelecionada = { ...mesaSelecionada, itens, total: totalMesa };
   await carregarMesas();
   renderMesaDetalhe();
 };
 
-function renderMesaDetalhe(){
+function renderMesaDetalhe() {
   const titulo = document.getElementById("tituloMesa");
   const itensDiv = document.getElementById("mesaItens");
-  if(!titulo || !itensDiv) return;
+  if (!titulo || !itensDiv) return;
 
-  if(!mesaSelecionada){
+  if (!mesaSelecionada) {
     titulo.textContent = "Selecione uma mesa";
     itensDiv.innerHTML = "<p>Nenhum item adicionado.</p>";
     return;
   }
 
-  titulo.textContent = `Mesa ${mesaSelecionada.numeroMesa} • R$ ${Number(mesaSelecionada.total || 0).toFixed(2)}`;
+  titulo.textContent = `Mesa ${mesaSelecionada.numeroMesa} • R$ ${Number(
+    mesaSelecionada.total || 0
+  ).toFixed(2)}`;
+
   const itens = mesaSelecionada.itens || [];
 
-  if(!itens.length){
+  if (!itens.length) {
     itensDiv.innerHTML = "<p>Nenhum item adicionado.</p>";
     return;
   }
 
-  itensDiv.innerHTML = itens.map((i)=>`
+  itensDiv.innerHTML = itens
+    .map(
+      (i) => `
     <div class="mesaItemLinha">
       <div>
         <strong>${i.nome}</strong><br>
@@ -610,16 +719,18 @@ function renderMesaDetalhe(){
         <button onclick="removerItemMesa('${i.idProduto}')">Remover</button>
       </div>
     </div>
-  `).join("");
+  `
+    )
+    .join("");
 }
 
-window.fecharMesaSelecionada = async()=>{
-  if(!mesaSelecionada){
+window.fecharMesaSelecionada = async () => {
+  if (!mesaSelecionada) {
     alert("Selecione uma mesa.");
     return;
   }
 
-  if(!caixaAberto || !caixaId){
+  if (!caixaAberto || !caixaId) {
     alert("Abra o caixa antes de fechar a mesa.");
     return;
   }
@@ -627,21 +738,19 @@ window.fecharMesaSelecionada = async()=>{
   const forma = document.getElementById("pagamentoMesa")?.value || "dinheiro";
   const totalMesa = Number(mesaSelecionada.total || 0);
 
-  if(totalMesa <= 0){
+  if (totalMesa <= 0) {
     alert("Mesa sem itens.");
     return;
   }
 
-  const itens = (mesaSelecionada.itens || []).map((i)=>(
-    {
-      idProduto: i.idProduto,
-      nome: i.nome,
-      preco: Number(i.preco),
-      quantidade: Number(i.quantidade)
-    }
-  ));
+  const itens = (mesaSelecionada.itens || []).map((i) => ({
+    idProduto: i.idProduto,
+    nome: i.nome,
+    preco: Number(i.preco),
+    quantidade: Number(i.quantidade)
+  }));
 
-  await addDoc(collection(db,"vendas"), {
+  await addDoc(collection(db, "vendas"), {
     criadoEm: new Date(),
     pagamentos: [{ tipo: forma, valor: totalMesa }],
     troco: 0,
@@ -657,12 +766,13 @@ window.fecharMesaSelecionada = async()=>{
     status: "finalizado"
   });
 
-  const caixaRef = doc(db,"caixa",caixaId);
+  const caixaRef = doc(db, "caixa", caixaId);
   const caixaSnap = await getDoc(caixaRef);
   const saldoAtual = Number(caixaSnap.data()?.saldoAtual || 0);
-  await updateDoc(caixaRef,{ saldoAtual: saldoAtual + totalMesa });
 
-  await updateDoc(doc(db,"comandas",mesaSelecionada.id), {
+  await updateDoc(caixaRef, { saldoAtual: saldoAtual + totalMesa });
+
+  await updateDoc(doc(db, "comandas", mesaSelecionada.id), {
     aberta: false,
     fechadaEm: new Date(),
     formaPagamento: forma
@@ -673,12 +783,12 @@ window.fecharMesaSelecionada = async()=>{
   await carregarMesas();
 };
 
-window.filtrarProdutos = ()=>{
+window.filtrarProdutos = () => {
   renderProdutos();
   renderProdutosMesa();
 };
 
-async function iniciar(){
+async function iniciar() {
   await carregarCaixaAberto();
   await carregarProdutos();
   await carregarMesas();

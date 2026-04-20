@@ -9,16 +9,20 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
-if(!usuario){
+if (!usuario) {
   window.location.href = "login.html";
 }
 
-if(usuario && !usuario.permissoes.includes("admin") && !usuario.permissoes.includes("caixa")){
+if (
+  usuario &&
+  !usuario.permissoes.includes("admin") &&
+  !usuario.permissoes.includes("caixa")
+) {
   alert("Sem acesso aos produtos");
   window.location.href = "pdv.html";
 }
 
-document.addEventListener("DOMContentLoaded", ()=>{
+document.addEventListener("DOMContentLoaded", () => {
   const lista = document.getElementById("listaProdutos");
   const tabelaWrapper = document.getElementById("tabelaWrapper");
   const estadoVazio = document.getElementById("estadoVazio");
@@ -51,13 +55,17 @@ document.addEventListener("DOMContentLoaded", ()=>{
   let imagemAtual = "";
   let filtroAtual = "all";
 
-  logoutBtn?.addEventListener("click", ()=>{
+  const CLOUD_NAME = "dbzkc4s85";
+  const UPLOAD_PRESET = "pdv_produtos";
+
+  logoutBtn?.addEventListener("click", () => {
     localStorage.removeItem("usuarioLogado");
     window.location.href = "login.html";
   });
 
-  function parseMoeda(valor){
-    if(!valor) return 0;
+  function parseMoeda(valor) {
+    if (!valor) return 0;
+
     const normalizado = String(valor)
       .replace(/R\$/g, "")
       .replace(/\s/g, "")
@@ -68,21 +76,24 @@ document.addEventListener("DOMContentLoaded", ()=>{
     return Number.isFinite(numero) ? numero : 0;
   }
 
-  function formatCurrency(valor){
-    return Number(valor || 0).toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
+  function formatCurrency(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
   }
 
-  function abrirModalProduto(){
+  function abrirModalProduto() {
     modal.classList.add("ativo");
     modal.setAttribute("aria-hidden", "false");
   }
 
-  function fecharModalProduto(){
+  function fecharModalProduto() {
     modal.classList.remove("ativo");
     modal.setAttribute("aria-hidden", "true");
   }
 
-  function limparForm(){
+  function limparForm() {
     nomeInput.value = "";
     descricaoInput.value = "";
     categoriaInput.value = "";
@@ -98,7 +109,16 @@ document.addEventListener("DOMContentLoaded", ()=>{
     imagemAtual = "";
   }
 
-  abrirModal.addEventListener("click", ()=>{
+  function otimizarImagemCloudinary(url, largura = 200) {
+    if (!url || !url.includes("res.cloudinary.com")) return url || "";
+
+    return url.replace(
+      "/image/upload/",
+      `/image/upload/f_auto,q_auto,w_${largura},c_limit/`
+    );
+  }
+
+  abrirModal.addEventListener("click", () => {
     editandoId = null;
     tituloModal.innerText = "Novo Produto";
     limparForm();
@@ -106,13 +126,14 @@ document.addEventListener("DOMContentLoaded", ()=>{
   });
 
   fecharModal.addEventListener("click", fecharModalProduto);
-  modal.addEventListener("click", (e)=>{
-    if(e.target === modal) fecharModalProduto();
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) fecharModalProduto();
   });
 
-  fotoInput.addEventListener("change", ()=>{
+  fotoInput.addEventListener("change", () => {
     const file = fotoInput.files[0];
-    if(!file) return;
+    if (!file) return;
 
     preview.src = URL.createObjectURL(file);
     preview.hidden = false;
@@ -120,53 +141,69 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   buscarInput.addEventListener("input", aplicarFiltros);
 
-  filtros.forEach((botao)=>{
-    botao.addEventListener("click", ()=>{
-      filtros.forEach((b)=>b.classList.remove("ativo"));
+  filtros.forEach((botao) => {
+    botao.addEventListener("click", () => {
+      filtros.forEach((b) => b.classList.remove("ativo"));
       botao.classList.add("ativo");
       filtroAtual = botao.dataset.filter || "all";
       aplicarFiltros();
     });
   });
 
-  async function uploadImagem(file){
-    const apiKey = "23ab27ffdb2e70c117fa3d57f8d0cbf9";
+  async function uploadImagem(file) {
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("file", file);
+    formData.append("upload_preset", UPLOAD_PRESET);
+    formData.append("folder", "pdv/produtos");
 
-    const resposta = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-      method: "POST",
-      body: formData
-    });
+    try {
+      const resposta = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formData
+        }
+      );
 
-    const data = await resposta.json();
-    return data?.data?.url || "";
+      const data = await resposta.json();
+
+      if (!resposta.ok) {
+        console.error("Erro Cloudinary:", data);
+        throw new Error("Falha ao enviar imagem para o Cloudinary.");
+      }
+
+      return data?.secure_url || "";
+    } catch (erro) {
+      console.error("Erro no upload da imagem:", erro);
+      alert("Não foi possível enviar a imagem. Tente novamente.");
+      return "";
+    }
   }
 
-  function getDescricaoProduto(produto){
+  function getDescricaoProduto(produto) {
     return produto.descricao || produto.categoria || "Sem descrição";
   }
 
-  function getQuantidadeProduto(produto){
+  function getQuantidadeProduto(produto) {
     return Number(produto.estoque ?? produto.quantity ?? 0);
   }
 
-  function getMinimoProduto(produto){
+  function getMinimoProduto(produto) {
     return Number(produto.estoqueMinimo ?? produto.minQuantity ?? 0);
   }
 
-  function getPrecoProduto(produto){
+  function getPrecoProduto(produto) {
     return Number(produto.preco ?? produto.price ?? 0);
   }
 
-  function getCustoProduto(produto){
+  function getCustoProduto(produto) {
     return Number(produto.custo ?? produto.costPrice ?? 0);
   }
 
-  function renderProdutos(listaRender){
+  function renderProdutos(listaRender) {
     lista.innerHTML = "";
 
-    if(!listaRender.length){
+    if (!listaRender.length) {
       tabelaWrapper.hidden = true;
       estadoVazio.hidden = false;
       return;
@@ -175,16 +212,29 @@ document.addEventListener("DOMContentLoaded", ()=>{
     tabelaWrapper.hidden = false;
     estadoVazio.hidden = true;
 
-    listaRender.forEach((p)=>{
+    listaRender.forEach((p) => {
       const quantidade = getQuantidadeProduto(p);
       const minimo = getMinimoProduto(p);
       const baixo = quantidade <= minimo;
+      const imagemProduto = otimizarImagemCloudinary(
+        p.imagem || "https://via.placeholder.com/120"
+      );
 
       lista.innerHTML += `
         <tr>
           <td>
-            <span class="produtoNome">${p.nome || "Sem nome"}</span>
-            <span class="produtoDesc">${getDescricaoProduto(p)}</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <img
+                src="${imagemProduto}"
+                alt="${p.nome || "Produto"}"
+                loading="lazy"
+                style="width:48px; height:48px; object-fit:cover; border-radius:10px; background:#f3f4f6;"
+              >
+              <div style="display:flex; flex-direction:column;">
+                <span class="produtoNome">${p.nome || "Sem nome"}</span>
+                <span class="produtoDesc">${getDescricaoProduto(p)}</span>
+              </div>
+            </div>
           </td>
           <td class="preco">${formatCurrency(getPrecoProduto(p))}</td>
           <td>${formatCurrency(getCustoProduto(p))}</td>
@@ -213,28 +263,28 @@ document.addEventListener("DOMContentLoaded", ()=>{
     });
   }
 
-  function aplicarFiltros(){
+  function aplicarFiltros() {
     const termo = buscarInput.value.trim().toLowerCase();
 
-    const filtrado = listaProdutos.filter((produto)=>{
+    const filtrado = listaProdutos.filter((produto) => {
       const nome = String(produto.nome || "").toLowerCase();
       const categoria = String(produto.categoria || "").toLowerCase();
       const quantidade = getQuantidadeProduto(produto);
 
       const matchBusca = !termo || nome.includes(termo) || categoria.includes(termo);
-      if(!matchBusca) return false;
+      if (!matchBusca) return false;
 
-      if(filtroAtual === "inStock") return quantidade > 0;
-      if(filtroAtual === "outOfStock") return quantidade === 0;
+      if (filtroAtual === "inStock") return quantidade > 0;
+      if (filtroAtual === "outOfStock") return quantidade === 0;
       return true;
     });
 
     renderProdutos(filtrado);
   }
 
-  window.editarProduto = (id)=>{
-    const p = listaProdutos.find((produto)=>produto.id === id);
-    if(!p) return;
+  window.editarProduto = (id) => {
+    const p = listaProdutos.find((produto) => produto.id === id);
+    if (!p) return;
 
     editandoId = id;
     imagemAtual = p.imagem || "";
@@ -250,7 +300,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
     precoPromoInput.value = Number(p.precoPromocional || 0) || "";
     codigoBarrasInput.value = p.codigoBarras || "";
 
-    if(imagemAtual){
+    if (imagemAtual) {
       preview.src = imagemAtual;
       preview.hidden = false;
     } else {
@@ -261,33 +311,40 @@ document.addEventListener("DOMContentLoaded", ()=>{
     abrirModalProduto();
   };
 
-  window.excluirProduto = async(id)=>{
-    if(!confirm("Excluir produto?")) return;
+  window.excluirProduto = async (id) => {
+    if (!confirm("Excluir produto?")) return;
     await deleteDoc(doc(db, "produtos", id));
     await carregarProdutos();
   };
 
-  window.toggleAtivo = async(id, inativo)=>{
+  window.toggleAtivo = async (id, inativo) => {
     await updateDoc(doc(db, "produtos", id), { ativo: inativo });
     await carregarProdutos();
   };
 
-  async function salvarProduto(){
+  async function salvarProduto() {
     const nome = nomeInput.value.trim();
     const preco = parseMoeda(precoInput.value);
 
-    if(!nome || !preco){
+    if (!nome || !preco) {
       alert("Preencha ao menos nome e preço do produto.");
       return;
     }
 
     let imagemURL = imagemAtual;
-    if(fotoInput.files[0]){
+
+    if (fotoInput.files[0]) {
       btnSalvar.disabled = true;
       btnSalvar.innerText = "Enviando...";
+
       imagemURL = await uploadImagem(fotoInput.files[0]);
+
       btnSalvar.disabled = false;
       btnSalvar.innerText = "Salvar";
+
+      if (!imagemURL) {
+        return;
+      }
     }
 
     const payload = {
@@ -306,7 +363,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
       ativo: true
     };
 
-    if(editandoId){
+    if (editandoId) {
       await updateDoc(doc(db, "produtos", editandoId), payload);
     } else {
       await addDoc(collection(db, "produtos"), payload);
@@ -319,11 +376,11 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   btnSalvar.addEventListener("click", salvarProduto);
 
-  async function carregarProdutos(){
+  async function carregarProdutos() {
     const snapshot = await getDocs(collection(db, "produtos"));
 
     listaProdutos = [];
-    snapshot.forEach((docSnap)=>{
+    snapshot.forEach((docSnap) => {
       const produto = docSnap.data();
       produto.id = docSnap.id;
       listaProdutos.push(produto);
