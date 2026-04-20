@@ -27,6 +27,7 @@ let caixaAberto = false;
 
 let mesasAbertas = [];
 let mesaSelecionada = null;
+const formatarMoeda = (valor)=>`R$ ${Number(valor || 0).toFixed(2)}`;
 
 const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
 if(!usuario){
@@ -176,8 +177,161 @@ function renderCarrinho(){
     });
   }
 
-  totalSpan.textContent = `R$ ${total.toFixed(2)}`;
+  totalSpan.textContent = formatarMoeda(total);
 }
+
+window.imprimirReciboPedido = ()=>{
+  if(!carrinho.length){
+    alert("Adicione itens no carrinho para emitir o recibo.");
+    return;
+  }
+
+  const desconto = 0;
+  const subtotal = total;
+  const totalFinal = Math.max(0, subtotal - desconto);
+  const dataHora = new Date().toLocaleString("pt-BR");
+  const logoUrl = new URL("../img/Logo.png", window.location.href).href;
+  const numeroPedido = `PDV-${Date.now().toString().slice(-6)}`;
+  const linhasItens = carrinho.map((item, index)=>{
+    const subtotalItem = Number(item.preco || 0) * Number(item.quantidade || 0);
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${item.id}</td>
+        <td>${item.nome}</td>
+        <td>${item.quantidade} un</td>
+        <td>${formatarMoeda(item.preco)}</td>
+        <td>${formatarMoeda(subtotalItem)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  const htmlCupom = `
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+      <meta charset="UTF-8">
+      <title>Cupom Fiscal - ${numeroPedido}</title>
+      <style>
+        body{
+          margin:0;
+          padding:16px;
+          font-family:"Courier New", monospace;
+          color:#111827;
+          background:#ffffff;
+        }
+        .cupom{
+          max-width:420px;
+          margin:0 auto;
+          border:1px dashed #111827;
+          padding:16px;
+        }
+        .logo{
+          text-align:center;
+          margin-bottom:8px;
+        }
+        .logo img{
+          width:140px;
+          max-width:100%;
+          object-fit:contain;
+        }
+        h2,p{
+          margin:4px 0;
+          text-align:center;
+        }
+        .meta{
+          margin:10px 0;
+          font-size:12px;
+          border-top:1px dashed #374151;
+          border-bottom:1px dashed #374151;
+          padding:8px 0;
+        }
+        table{
+          width:100%;
+          border-collapse:collapse;
+          font-size:12px;
+        }
+        th,td{
+          border-bottom:1px dotted #d1d5db;
+          padding:5px 2px;
+          text-align:left;
+          vertical-align:top;
+        }
+        .resumo{
+          margin-top:10px;
+          font-size:13px;
+        }
+        .resumo div{
+          display:flex;
+          justify-content:space-between;
+          margin:2px 0;
+        }
+        .total{
+          font-weight:700;
+          font-size:15px;
+          border-top:1px dashed #111827;
+          padding-top:6px;
+        }
+        .agradecimento{
+          margin-top:14px;
+          text-align:center;
+          font-size:12px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="cupom">
+        <div class="logo"><img src="${logoUrl}" alt="Açaí do Rapha"></div>
+        <h2>Açaí do Rapha</h2>
+        <p>Cupom do pedido</p>
+
+        <div class="meta">
+          <div><strong>Pedido:</strong> ${numeroPedido}</div>
+          <div><strong>Data/Hora:</strong> ${dataHora}</div>
+          <div><strong>Operador:</strong> ${usuario?.nome || "Não informado"}</div>
+          <div><strong>Cliente:</strong> ${nomeClienteInput?.value?.trim() || "Balcão"}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>ID</th>
+              <th>Descrição</th>
+              <th>QNTD un</th>
+              <th>VL.item</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>${linhasItens}</tbody>
+        </table>
+
+        <div class="resumo">
+          <div><span>Subtotal:</span><strong>${formatarMoeda(subtotal)}</strong></div>
+          <div><span>Desconto:</span><strong>${formatarMoeda(desconto)}</strong></div>
+          <div class="total"><span>Total:</span><strong>${formatarMoeda(totalFinal)}</strong></div>
+        </div>
+
+        <p class="agradecimento">Obrigado por escolher o Açaí do Rapha!</p>
+      </div>
+      <script>
+        window.onload = function(){
+          window.print();
+        };
+      <\/script>
+    </body>
+    </html>
+  `;
+
+  const janela = window.open("", "_blank", "width=480,height=720");
+  if(!janela){
+    alert("Não foi possível abrir a janela de impressão.");
+    return;
+  }
+  janela.document.open();
+  janela.document.write(htmlCupom);
+  janela.document.close();
+};
 
 async function finalizarVendaCompleta(pagamentos, troco = 0){
   if(!caixaAberto || !caixaId){
