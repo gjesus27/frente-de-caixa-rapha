@@ -21,6 +21,7 @@
       <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
       <a href="entregador.html"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
       <a href="historico.html" data-only-admin><i class="fa-solid fa-clock-rotate-left"></i> Histórico</a>
+        <a href="configuracoes.html"><i class="fa-solid fa-gear"></i> Configurações</a>
     </nav>
     <button onclick="baixarExcel()" class="sidebarAction">
       <i class="fa-solid fa-file-excel"></i> Relatório Excel
@@ -77,7 +78,16 @@
           <small>PDV: <strong id="totalPdv">R$ 0,00</strong> • Delivery: <strong id="totalDelivery">R$ 0,00</strong></small>
         </div>
       </article>
-    </section>
+    
+      <article class="cardResumo destaqueRoxo">
+        <div>
+          <h3>Fiado em aberto</h3>
+          <p id="fiadoAberto">R$ 0,00</p>
+          <small id="fiadoQtd">0 clientes pendentes</small>
+        </div>
+        <i class="fa-solid fa-handshake"></i>
+      </article>
+</section>
 
     <section class="gridPrincipal">
       <article class="painelCard cardLargo">
@@ -105,6 +115,15 @@
         </div>
         <div id="ultimosPedidos" class="listaPedidos"></div>
       </article>
+
+      
+      <article class="painelCard">
+        <div class="cardHeader">
+          <h3>Clientes fiados</h3>
+        </div>
+        <div id="listaFiados" class="listaPedidos"></div>
+      </article>
+
 
       <article class="painelCard">
         <div class="cardHeader">
@@ -207,12 +226,13 @@ async function carregar(){
   const dataInicio = parseData(inicio);
   const dataFim = parseData(fim);
 
-  const [vendasSnap, retiradasSnap, plataformasSnap, pedidosSnap, produtosSnap] = await Promise.all([
+  const [vendasSnap, retiradasSnap, plataformasSnap, pedidosSnap, produtosSnap, fiadosSnap] = await Promise.all([
     getDocs(collection(db,"vendas")),
     getDocs(collection(db,"retiradas")),
     getDocs(collection(db,"plataformas")),
     getDocs(collection(db,"pedidos")),
-    getDocs(collection(db,"produtos"))
+    getDocs(collection(db,"produtos")),
+    getDocs(collection(db,"fiados"))
   ]);
 
   const fluxo7Dias = getLast7DaysMap();
@@ -285,11 +305,27 @@ async function carregar(){
   });
 
   let estoqueCritico = 0;
+  let fiadoAberto = 0;
+  const fiadosPendentes = [];
   produtosSnap.forEach((docSnap)=>{
     const produto = docSnap.data();
     const estoque = Number(produto.estoque || 0);
     const minimo = Number(produto.estoqueMinimo || 0);
     if(estoque <= minimo) estoqueCritico += 1;
+  });
+
+  fiadosSnap.forEach((docSnap)=>{
+    const fiado = docSnap.data() || {};
+    if(fiado.status === "quitado") return;
+
+    const saldo = Number(fiado.saldoPendente ?? fiado.total ?? 0);
+    if(saldo <= 0) return;
+
+    fiadoAberto += saldo;
+    fiadosPendentes.push({
+      cliente: fiado.cliente || "Cliente",
+      saldo
+    });
   });
 
   const comparativo = lucroIfood + lucroKeeta;
@@ -304,6 +340,10 @@ async function carregar(){
   document.getElementById("lucroIfood").innerText = formatCurrency(lucroIfood);
   document.getElementById("lucroKeeta").innerText = formatCurrency(lucroKeeta);
   document.getElementById("comparativoVendas").innerText = `iFood + Keeta acumulado: ${formatCurrency(comparativo)}`;
+  document.getElementById("fiadoAberto").innerText = formatCurrency(fiadoAberto);
+  document.getElementById("fiadoQtd").innerText = `${fiadosPendentes.length} clientes pendentes`;
+
+  renderFiados(fiadosPendentes);
 
   desenharGraficoFluxo(fluxo7Dias);
   desenharRanking(ranking);
@@ -342,6 +382,26 @@ function traduzirStatus(status){
     cancelado: "Cancelado"
   };
   return mapa[status] || status;
+}
+
+function renderFiados(fiados){
+  const lista = document.getElementById("listaFiados");
+  if(!lista) return;
+
+  if(!fiados.length){
+    lista.innerHTML = `<p class="vazio">Nenhum fiado em aberto.</p>`;
+    return;
+  }
+
+  lista.innerHTML = fiados
+    .sort((a,b)=> b.saldo - a.saldo)
+    .map((item)=>`
+      <div class="pedidoItem">
+        <strong>${item.cliente}</strong>
+        <span>${formatCurrency(item.saldo)}</span>
+      </div>
+    `)
+    .join("");
 }
 
 function desenharUltimosPedidos(pedidos){

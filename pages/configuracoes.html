@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurações</title>
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/configuracoes.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
+</head>
+<body>
+  <div class="layoutAdmin">
+    <aside class="sidebarAdmin">
+      <h2>Painel</h2>
+      <p class="sidebarUser" data-usuario-logado></p>
+      <nav>
+        <a href="dashboard.html" data-only-admin><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="pdv.html"><i class="fa-solid fa-cash-register"></i> PDV</a>
+        <a href="caixa.html"><i class="fa-solid fa-vault"></i> Caixa</a>
+        <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
+        <a href="entregador.html"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
+        <a href="historico.html" data-only-admin><i class="fa-solid fa-clock-rotate-left"></i> Histórico</a>
+        <a href="configuracoes.html" class="ativo"><i class="fa-solid fa-gear"></i> Configurações</a>
+      </nav>
+      <a class="sidebarAction suporte" href="https://wa.me/11987293823" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i> Solicitar suporte</a>
+      <button id="logout" class="sidebarAction sair">Sair</button>
+    </aside>
+
+    <main class="conteudoAdmin">
+      <header class="topoConfiguracoes">
+        <div>
+          <h1>Configurações</h1>
+          <p>Edite seu perfil, usuários, permissões e categorias de produtos.</p>
+        </div>
+      </header>
+
+      <section class="painelCard">
+        <h3>Meu perfil</h3>
+        <div class="formGrid">
+          <label>Foto (URL)
+            <input id="meuFoto" placeholder="https://...">
+          </label>
+          <label>Nome
+            <input id="meuNome" placeholder="Seu nome">
+          </label>
+          <label>Nova senha
+            <input id="minhaSenha" type="password" placeholder="********">
+          </label>
+        </div>
+        <button id="salvarMeuPerfil" class="btnPrimario">Salvar meu perfil</button>
+      </section>
+
+      <section class="painelCard" data-admin-area>
+        <h3>Categorias pré-definidas</h3>
+        <div class="categoriaLinha">
+          <input id="novaCategoria" placeholder="Ex.: Açaí, Lanches, Bebidas">
+          <button id="adicionarCategoria" class="btnPrimario">Adicionar</button>
+        </div>
+        <div id="listaCategorias" class="listaSimples"></div>
+      </section>
+
+      <section class="painelCard" data-admin-area>
+        <h3>Usuários (admin)</h3>
+        <div id="listaUsuariosAdmin" class="usuariosAdmin"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="../js/configuracoes.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module">import { aplicarUsuarioLogado } from "../js/layout.js"; aplicarUsuarioLogado();</script>
+</body>
+</html>
