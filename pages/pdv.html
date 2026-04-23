@@ -21,6 +21,7 @@
         <a href="produtos.html"><i class="fa-solid fa-box"></i> Produtos</a>
         <a href="entregador.html"><i class="fa-solid fa-motorcycle"></i> Entregas</a>
         <a href="historico.html" data-only-admin><i class="fa-solid fa-clock-rotate-left"></i> Histórico</a>
+        <a href="configuracoes.html"><i class="fa-solid fa-gear"></i> Configurações</a>
       </nav>
       <a class="sidebarAction suporte" href="https://wa.me/11987293823" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i> Solicitar suporte</a>
       <button id="logout" class="sidebarAction sair">Sair</button>
@@ -67,6 +68,7 @@
             <button onclick="pagarSimples('ticket')"><i class="fa-solid fa-ticket"></i> Ticket</button>
             <button onclick="abrirPagamentoMisto()"><i class="fa-solid fa-layer-group"></i> Misto</button>
             <button onclick="pagarSimples('cashback')"><i class="fa-solid fa-coins"></i> Cashback</button>
+            <button onclick="abrirModalFiado()"><i class="fa-solid fa-handshake"></i> Fiado</button>
           </div>
         </article>
       </section>
@@ -87,22 +89,37 @@
           </div>
           <div id="mesaItens" class="mesaItens"></div>
 
-          <div class="mesaFooter">
-            <select id="pagamentoMesa">
-              <option value="dinheiro">Dinheiro</option>
-              <option value="pix">PIX</option>
-              <option value="debito">Débito</option>
-              <option value="credito">Crédito</option>
-              <option value="ticket">Ticket</option>
-              <option value="cashback">Cashback</option>
-            </select>
-          </div>
-
           <h4>Adicionar produto</h4>
           <div id="produtosMesa" class="produtosMesa"></div>
         </article>
       </section>
     </main>
+  </div>
+
+
+  <div id="modalPagamentoMesa" class="modal" aria-hidden="true">
+    <div class="modalBox">
+      <h3>Fechar mesa</h3>
+      <p>Selecione a forma de pagamento:</p>
+      <div class="pagamentos" id="opcoesPagamentoMesa"></div>
+      <div class="modalBtns">
+        <button id="cancelarPagamentoMesa" class="btnSecundario">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalFiado" class="modal" aria-hidden="true">
+    <div class="modalBox">
+      <h3>Registrar fiado</h3>
+      <label>Nome do cliente</label>
+      <input id="fiadoCliente" placeholder="Nome de quem vai pagar depois">
+      <label>Observação</label>
+      <input id="fiadoObservacao" placeholder="Ex.: pagar sexta-feira">
+      <div class="modalBtns">
+        <button id="confirmarFiado" class="btnPrimario">Salvar fiado</button>
+        <button id="cancelarFiado" class="btnSecundario">Cancelar</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="../js/caixa.js"></script>

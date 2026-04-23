@@ -22,7 +22,7 @@ if (
   window.location.href = "pdv.html";
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const lista = document.getElementById("listaProdutos");
   const tabelaWrapper = document.getElementById("tabelaWrapper");
   const estadoVazio = document.getElementById("estadoVazio");
@@ -51,6 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const logoutBtn = document.getElementById("logout");
 
   let listaProdutos = [];
+  let categoriasPredefinidas = [];
   let editandoId = null;
   let imagemAtual = "";
   let filtroAtual = "all";
@@ -107,6 +108,26 @@ document.addEventListener("DOMContentLoaded", () => {
     preview.hidden = true;
     preview.src = "";
     imagemAtual = "";
+  }
+
+
+  async function carregarCategoriasPredefinidas() {
+    const snapshot = await getDocs(collection(db, "categoriasProduto"));
+    categoriasPredefinidas = [];
+
+    snapshot.forEach((docSnap) => {
+      const cat = docSnap.data();
+      if (cat?.nome) categoriasPredefinidas.push(String(cat.nome));
+    });
+
+    categoriasPredefinidas = [...new Set(categoriasPredefinidas)]
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    categoriaInput.innerHTML = `
+      <option value="">Selecione...</option>
+      ${categoriasPredefinidas.map((cat) => `<option value="${cat}">${cat}</option>`).join("")}
+      <option value="outros">outros</option>
+    `;
   }
 
   function otimizarImagemCloudinary(url, largura = 200) {
@@ -350,7 +371,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const payload = {
       nome,
       descricao: descricaoInput.value.trim(),
-      categoria: categoriaInput.value.trim(),
+      categoria: (categoriaInput.value || "outros").trim(),
       preco,
       custo: parseMoeda(custoInput.value),
       precoPromocional: parseMoeda(precoPromoInput.value) || null,
@@ -389,5 +410,6 @@ document.addEventListener("DOMContentLoaded", () => {
     aplicarFiltros();
   }
 
-  carregarProdutos();
+  await carregarCategoriasPredefinidas();
+  await carregarProdutos();
 });

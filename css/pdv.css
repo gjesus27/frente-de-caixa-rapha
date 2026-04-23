@@ -450,3 +450,12 @@ select{
     font-size:16px;
   }
 }
+
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;padding:20px;z-index:30;}
+.modal.ativo{display:block;}
+.modalBox{max-width:460px;margin:40px auto;background:#fff;border-radius:14px;padding:16px;}
+.modalBox input{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:8px;}
+.modalBtns{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;}
+.btnPrimario,.btnSecundario{border:none;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:700;}
+.btnPrimario{background:#5e17eb;color:#fff;}
+.btnSecundario{background:#e5e7eb;color:#111827;}

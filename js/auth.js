@@ -11,6 +11,13 @@ function temPermissao(permissao){
   return usuario && usuario.permissoes && usuario.permissoes.includes(permissao);
 }
 
+function temAcessoPagina(chave){
+  if(!usuario) return false;
+  if(temPermissao("admin")) return true;
+  const paginas = Array.isArray(usuario.permissoesPaginas) ? usuario.permissoesPaginas : ["pdv","caixa","produtos","entregador","historico","configuracoes"];
+  return paginas.includes(chave);
+}
+
 let aberto = null;
 const listaUsuarios = document.getElementById("listaUsuarios");
 
@@ -23,6 +30,14 @@ if(listaUsuarios){
 
   const pagina = window.location.pathname;
 
+  function validarPagina(chave, mensagem){
+    if(!pagina.includes(`${chave}.html`)) return false;
+    if(temAcessoPagina(chave)) return false;
+    alert(mensagem);
+    window.location.href = "pdv.html";
+    return true;
+  }
+
   if(pagina.includes("dashboard.html") && !temPermissao("admin")){
     alert("Sem acesso ao dashboard");
     window.location.href = "pdv.html";
@@ -33,20 +48,13 @@ if(listaUsuarios){
     window.location.href = "pdv.html";
   }
 
-  if(pagina.includes("entregador.html") && !temPermissao("admin") && !temPermissao("caixa")){
-    alert("Sem acesso às entregas");
-    window.location.href = "pdv.html";
-  }
-
-  if(pagina.includes("produtos.html") && !temPermissao("admin") && !temPermissao("caixa")){
-    alert("Sem acesso aos produtos");
-    window.location.href = "pdv.html";
-  }
-
-  if(pagina.includes("caixa.html") && !temPermissao("admin") && !temPermissao("caixa")){
-    alert("Sem acesso ao caixa");
-    window.location.href = "pdv.html";
-  }
+  if(validarPagina("configuracoes", "Sem acesso às configurações")) return;
+  if(validarPagina("pdv", "Sem acesso ao PDV")) return;
+  if(validarPagina("caixa", "Sem acesso ao caixa")) return;
+  if(validarPagina("produtos", "Sem acesso aos produtos")) return;
+  if(validarPagina("entregador", "Sem acesso às entregas")) return;
+  if(validarPagina("historico", "Sem acesso ao histórico")) return;
+  if(validarPagina("dashboard", "Sem acesso ao dashboard")) return;
 
   const logoutBtn = document.getElementById("logout");
   if(logoutBtn){
@@ -105,7 +113,7 @@ async function carregarUsuarios(){
         return;
       }
 
-      localStorage.setItem("usuarioLogado",JSON.stringify(user));
+      localStorage.setItem("usuarioLogado",JSON.stringify({ id: doc.id, ...user }));
       const p = user.permissoes || [];
 
       if(p.includes("admin")) window.location.href="../pages/dashboard.html";
