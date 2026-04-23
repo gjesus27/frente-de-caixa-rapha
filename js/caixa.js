@@ -16,6 +16,14 @@ const totalSpan = document.getElementById("total");
 const pesquisaInput = document.getElementById("pesquisaProduto");
 const categoriasDiv = document.getElementById("categorias");
 const nomeClienteInput = document.getElementById("nomeCliente");
+const modalPagamentoMesa = document.getElementById("modalPagamentoMesa");
+const opcoesPagamentoMesa = document.getElementById("opcoesPagamentoMesa");
+const cancelarPagamentoMesa = document.getElementById("cancelarPagamentoMesa");
+const modalFiado = document.getElementById("modalFiado");
+const fiadoClienteInput = document.getElementById("fiadoCliente");
+const fiadoObservacaoInput = document.getElementById("fiadoObservacao");
+const confirmarFiadoBtn = document.getElementById("confirmarFiado");
+const cancelarFiadoBtn = document.getElementById("cancelarFiado");
 
 let listaProdutos = [];
 let carrinho = [];
@@ -43,6 +51,20 @@ function otimizarImagem(url, largura = 250) {
     "/image/upload/",
     `/image/upload/f_auto,q_auto,w_${largura},c_limit/`
   );
+}
+
+
+
+function abrirModal(idModal) {
+  if (!idModal) return;
+  idModal.classList.add("ativo");
+  idModal.setAttribute("aria-hidden", "false");
+}
+
+function fecharModal(idModal) {
+  if (!idModal) return;
+  idModal.classList.remove("ativo");
+  idModal.setAttribute("aria-hidden", "true");
 }
 
 async function carregarCaixaAberto() {
@@ -448,6 +470,79 @@ async function finalizarVendaCompleta(pagamentos, troco = 0) {
   renderCarrinho();
 }
 
+
+
+window.abrirModalFiado = () => {
+  if (total <= 0) {
+    alert("Carrinho vazio.");
+    return;
+  }
+
+  fiadoClienteInput.value = nomeClienteInput?.value?.trim() || "";
+  fiadoObservacaoInput.value = "";
+  abrirModal(modalFiado);
+};
+
+async function registrarFiado() {
+  const cliente = fiadoClienteInput.value.trim();
+  if (!cliente) {
+    alert("Informe o nome do cliente fiado.");
+    return;
+  }
+
+  const observacao = fiadoObservacaoInput.value.trim();
+  const itens = carrinho.map((p) => ({
+    idProduto: p.id,
+    nome: p.nome,
+    preco: Number(p.preco),
+    quantidade: Number(p.quantidade)
+  }));
+
+  await addDoc(collection(db, "fiados"), {
+    cliente,
+    observacao,
+    total,
+    saldoPendente: total,
+    origem: "balcao",
+    itens,
+    status: "aberto",
+    criadoEm: new Date(),
+    criadoPor: usuario.nome
+  });
+
+  await addDoc(collection(db, "vendas"), {
+    criadoEm: new Date(),
+    pagamentos: [{ tipo: "fiado", valor: total }],
+    troco: 0,
+    idCaixa: caixaId,
+    idUsuario: usuario.nome,
+    nomeUsuario: usuario.nome,
+    cliente,
+    observacao,
+    itens,
+    subtotal: total,
+    total,
+    tipo: "balcao",
+    status: "fiado"
+  });
+
+  for (const item of carrinho) {
+    const pRef = doc(db, "produtos", item.id);
+    const produtoAtual = listaProdutos.find((p) => p.id === item.id);
+    if (!produtoAtual) continue;
+
+    const novoEstoque = Math.max(0, Number(produtoAtual.estoque || 0) - Number(item.quantidade || 0));
+    await updateDoc(pRef, { estoque: novoEstoque });
+  }
+
+  carrinho = [];
+  if (nomeClienteInput) nomeClienteInput.value = "";
+  fecharModal(modalFiado);
+  await carregarProdutos();
+  renderCarrinho();
+  alert("Fiado registrado com sucesso.");
+}
+
 window.pagarSimples = async (tipo) => {
   if (total <= 0) {
     alert("Carrinho vazio.");
@@ -735,14 +830,29 @@ window.fecharMesaSelecionada = async () => {
     return;
   }
 
-  const forma = document.getElementById("pagamentoMesa")?.value || "dinheiro";
   const totalMesa = Number(mesaSelecionada.total || 0);
-
   if (totalMesa <= 0) {
     alert("Mesa sem itens.");
     return;
   }
 
+  const formas = ["dinheiro", "pix", "debito", "credito", "ticket", "cashback"];
+  opcoesPagamentoMesa.innerHTML = "";
+
+  formas.forEach((forma) => {
+    const btn = document.createElement("button");
+    btn.textContent = forma.toUpperCase();
+    btn.onclick = () => confirmarFechamentoMesa(forma);
+    opcoesPagamentoMesa.appendChild(btn);
+  });
+
+  abrirModal(modalPagamentoMesa);
+};
+
+async function confirmarFechamentoMesa(forma) {
+  if (!mesaSelecionada) return;
+
+  const totalMesa = Number(mesaSelecionada.total || 0);
   const itens = (mesaSelecionada.itens || []).map((i) => ({
     idProduto: i.idProduto,
     nome: i.nome,
@@ -769,7 +879,6 @@ window.fecharMesaSelecionada = async () => {
   const caixaRef = doc(db, "caixa", caixaId);
   const caixaSnap = await getDoc(caixaRef);
   const saldoAtual = Number(caixaSnap.data()?.saldoAtual || 0);
-
   await updateDoc(caixaRef, { saldoAtual: saldoAtual + totalMesa });
 
   await updateDoc(doc(db, "comandas", mesaSelecionada.id), {
@@ -778,15 +887,20 @@ window.fecharMesaSelecionada = async () => {
     formaPagamento: forma
   });
 
+  fecharModal(modalPagamentoMesa);
   alert(`Mesa ${mesaSelecionada.numeroMesa} fechada com sucesso.`);
   mesaSelecionada = null;
   await carregarMesas();
-};
+}
 
 window.filtrarProdutos = () => {
   renderProdutos();
   renderProdutosMesa();
 };
+
+cancelarPagamentoMesa?.addEventListener("click", () => fecharModal(modalPagamentoMesa));
+cancelarFiadoBtn?.addEventListener("click", () => fecharModal(modalFiado));
+confirmarFiadoBtn?.addEventListener("click", registrarFiado);
 
 async function iniciar() {
   await carregarCaixaAberto();
