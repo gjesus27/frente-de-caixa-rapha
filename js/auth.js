@@ -14,7 +14,11 @@ function temPermissao(permissao){
 function temAcessoPagina(chave){
   if(!usuario) return false;
   if(temPermissao("admin")) return true;
-  const paginas = Array.isArray(usuario.permissoesPaginas) ? usuario.permissoesPaginas : ["pdv","caixa","produtos","entregador","historico","configuracoes"];
+
+  const paginas = Array.isArray(usuario.permissoesPaginas)
+    ? usuario.permissoesPaginas
+    : ["pdv","caixa","produtos","entregador","historico","configuracoes"];
+
   return paginas.includes(chave);
 }
 
@@ -26,42 +30,45 @@ if(listaUsuarios){
 }else{
   if(!usuario){
     window.location.href = "../index.html";
-  }
+  }else{
+    const pagina = window.location.pathname;
 
-  const pagina = window.location.pathname;
+    function validarPagina(chave, mensagem){
+      if(!pagina.includes(`${chave}.html`)) return false;
+      if(temAcessoPagina(chave)) return false;
+      alert(mensagem);
+      window.location.href = "pdv.html";
+      return true;
+    }
 
-  function validarPagina(chave, mensagem){
-    if(!pagina.includes(`${chave}.html`)) return false;
-    if(temAcessoPagina(chave)) return false;
-    alert(mensagem);
-    window.location.href = "pdv.html";
-    return true;
-  }
+    if(pagina.includes("dashboard.html") && !temPermissao("admin")){
+      alert("Sem acesso ao dashboard");
+      window.location.href = "pdv.html";
+    }
 
-  if(pagina.includes("dashboard.html") && !temPermissao("admin")){
-    alert("Sem acesso ao dashboard");
-    window.location.href = "pdv.html";
-  }
+    if(pagina.includes("historico.html") && !temPermissao("admin")){
+      alert("Sem acesso ao histórico");
+      window.location.href = "pdv.html";
+    }
 
-  if(pagina.includes("historico.html") && !temPermissao("admin")){
-    alert("Sem acesso ao histórico");
-    window.location.href = "pdv.html";
-  }
+    const bloqueado =
+      validarPagina("configuracoes", "Sem acesso às configurações") ||
+      validarPagina("pdv", "Sem acesso ao PDV") ||
+      validarPagina("caixa", "Sem acesso ao caixa") ||
+      validarPagina("produtos", "Sem acesso aos produtos") ||
+      validarPagina("entregador", "Sem acesso às entregas") ||
+      validarPagina("historico", "Sem acesso ao histórico") ||
+      validarPagina("dashboard", "Sem acesso ao dashboard");
 
-  if(validarPagina("configuracoes", "Sem acesso às configurações")) return;
-  if(validarPagina("pdv", "Sem acesso ao PDV")) return;
-  if(validarPagina("caixa", "Sem acesso ao caixa")) return;
-  if(validarPagina("produtos", "Sem acesso aos produtos")) return;
-  if(validarPagina("entregador", "Sem acesso às entregas")) return;
-  if(validarPagina("historico", "Sem acesso ao histórico")) return;
-  if(validarPagina("dashboard", "Sem acesso ao dashboard")) return;
-
-  const logoutBtn = document.getElementById("logout");
-  if(logoutBtn){
-    logoutBtn.onclick = ()=>{
-      localStorage.removeItem("usuarioLogado");
-      window.location.href="../index.html";
-    };
+    if(!bloqueado){
+      const logoutBtn = document.getElementById("logout");
+      if(logoutBtn){
+        logoutBtn.onclick = ()=>{
+          localStorage.removeItem("usuarioLogado");
+          window.location.href = "../index.html";
+        };
+      }
+    }
   }
 }
 
@@ -78,7 +85,7 @@ async function carregarUsuarios(){
     card.classList.add("usuario");
 
     card.innerHTML = `
-      <img src="${foto}">
+      <img src="${foto}" alt="${user.nome}">
       <p>${user.nome}</p>
       <div class="areaSenha">
         <input type="password" placeholder="Digite sua senha">
@@ -95,14 +102,14 @@ async function carregarUsuarios(){
     const cancelar = card.querySelector(".cancelar");
 
     card.onclick = ()=>{
-      if(aberto && aberto !== area) aberto.style.display="none";
-      area.style.display="block";
+      if(aberto && aberto !== area) aberto.style.display = "none";
+      area.style.display = "block";
       aberto = area;
     };
 
     cancelar.onclick = (e)=>{
       e.stopPropagation();
-      area.style.display="none";
+      area.style.display = "none";
     };
 
     entrar.onclick = (e)=>{
@@ -113,13 +120,18 @@ async function carregarUsuarios(){
         return;
       }
 
-      localStorage.setItem("usuarioLogado",JSON.stringify({ id: doc.id, ...user }));
+      localStorage.setItem("usuarioLogado", JSON.stringify({ id: doc.id, ...user }));
       const p = user.permissoes || [];
 
-      if(p.includes("admin")) window.location.href="../pages/dashboard.html";
-      else if(p.includes("caixa")) window.location.href="../pages/pdv.html";
-      else if(p.includes("entregador")) window.location.href="../pages/entregador.html";
-      else window.location.href="../pages/pdv.html";
+      if(p.includes("admin")){
+        window.location.href = "../pages/dashboard.html";
+      }else if(p.includes("caixa")){
+        window.location.href = "../pages/pdv.html";
+      }else if(p.includes("entregador")){
+        window.location.href = "../pages/entregador.html";
+      }else{
+        window.location.href = "../pages/pdv.html";
+      }
     };
 
     listaUsuarios.appendChild(card);
