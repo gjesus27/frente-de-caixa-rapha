@@ -4,6 +4,7 @@ import {
   collection,
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { showAlert } from "./ui-feedback.js";
 
 const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
 
@@ -17,7 +18,7 @@ function temAcessoPagina(chave){
 
   const paginas = Array.isArray(usuario.permissoesPaginas)
     ? usuario.permissoesPaginas
-    : ["pdv","caixa","produtos","entregador","historico","configuracoes"];
+    : ["pdv","caixa","produtos","entregador","historico","configuracoes","fiados"];
 
   return paginas.includes(chave);
 }
@@ -36,18 +37,18 @@ if(listaUsuarios){
     function validarPagina(chave, mensagem){
       if(!pagina.includes(`${chave}.html`)) return false;
       if(temAcessoPagina(chave)) return false;
-      alert(mensagem);
+      showAlert(mensagem);
       window.location.href = "pdv.html";
       return true;
     }
 
     if(pagina.includes("dashboard.html") && !temPermissao("admin")){
-      alert("Sem acesso ao dashboard");
+      showAlert("Sem acesso ao dashboard");
       window.location.href = "pdv.html";
     }
 
     if(pagina.includes("historico.html") && !temPermissao("admin")){
-      alert("Sem acesso ao histórico");
+      showAlert("Sem acesso ao histórico");
       window.location.href = "pdv.html";
     }
 
@@ -58,7 +59,8 @@ if(listaUsuarios){
       validarPagina("produtos", "Sem acesso aos produtos") ||
       validarPagina("entregador", "Sem acesso às entregas") ||
       validarPagina("historico", "Sem acesso ao histórico") ||
-      validarPagina("dashboard", "Sem acesso ao dashboard");
+      validarPagina("dashboard", "Sem acesso ao dashboard") ||
+      validarPagina("fiados", "Sem acesso à cobrança de fiados");
 
     if(!bloqueado){
       const logoutBtn = document.getElementById("logout");
@@ -116,7 +118,7 @@ async function carregarUsuarios(){
       e.stopPropagation();
 
       if(input.value !== user.senha){
-        alert("Senha incorreta");
+        showAlert("Senha incorreta");
         return;
       }
 

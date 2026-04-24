@@ -7,6 +7,7 @@ import {
   doc,
   deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { showAlert, showConfirm } from "./ui-feedback.js";
 
 const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
 if (!usuario) {
@@ -18,7 +19,7 @@ if (
   !usuario.permissoes.includes("admin") &&
   !usuario.permissoes.includes("caixa")
 ) {
-  alert("Sem acesso aos produtos");
+  showAlert("Sem acesso aos produtos");
   window.location.href = "pdv.html";
 }
 
@@ -196,7 +197,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return data?.secure_url || "";
     } catch (erro) {
       console.error("Erro no upload da imagem:", erro);
-      alert("Não foi possível enviar a imagem. Tente novamente.");
+      showAlert("Não foi possível enviar a imagem. Tente novamente.");
       return "";
     }
   }
@@ -333,7 +334,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   window.excluirProduto = async (id) => {
-    if (!confirm("Excluir produto?")) return;
+    if (!(await showConfirm("Excluir produto?"))) return;
     await deleteDoc(doc(db, "produtos", id));
     await carregarProdutos();
   };
@@ -348,7 +349,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const preco = parseMoeda(precoInput.value);
 
     if (!nome || !preco) {
-      alert("Preencha ao menos nome e preço do produto.");
+      showAlert("Preencha ao menos nome e preço do produto.");
       return;
     }
 

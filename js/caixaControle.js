@@ -11,6 +11,7 @@ import {
   orderBy,
   limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { showAlert, showConfirm, showPrompt } from "./ui-feedback.js";
 
 const usuario = exigirLogin();
 aplicarUsuarioLogado();
@@ -177,7 +178,7 @@ function renderResumoPagamentos(){
 async function abrirCaixa(){
   const valor = Number(document.getElementById("valorInicial").value);
   if(!valor){
-    alert("Informe um valor inicial válido.");
+    showAlert("Informe um valor inicial válido.");
     return;
   }
 
@@ -199,7 +200,7 @@ async function registrarSangria(){
   const motivo = document.getElementById("motivoSangria").value.trim();
 
   if(!valor || !motivo){
-    alert("Informe valor e motivo da sangria.");
+    showAlert("Informe valor e motivo da sangria.");
     return;
   }
 
@@ -245,7 +246,7 @@ async function confirmarFechamento(){
     editadoPor: null
   });
 
-  alert("Caixa fechado com sucesso.");
+  showAlert("Caixa fechado com sucesso.");
   await carregarCaixaAtual();
   await carregarHistorico();
 }
@@ -262,15 +263,15 @@ async function editarFechamento(caixaId){
   if(!caixa) return;
 
   const resumoAtual = caixa.resumoPagamentos || {};
-  const dinheiro = Number(prompt("Editar Dinheiro:", Number(resumoAtual.dinheiro || 0).toFixed(2)));
-  const pix = Number(prompt("Editar PIX:", Number(resumoAtual.pix || 0).toFixed(2)));
-  const debito = Number(prompt("Editar Débito:", Number(resumoAtual.debito || 0).toFixed(2)));
-  const credito = Number(prompt("Editar Crédito:", Number(resumoAtual.credito || 0).toFixed(2)));
-  const ticket = Number(prompt("Editar Ticket:", Number(resumoAtual.ticket || 0).toFixed(2)));
-  const cashback = Number(prompt("Editar Cashback:", Number(resumoAtual.cashback || 0).toFixed(2)));
+  const dinheiro = Number((await showPrompt({ mensagem: "Editar Dinheiro", valorPadrao: Number(resumoAtual.dinheiro || 0).toFixed(2) }))?.replace(",", "."));
+  const pix = Number((await showPrompt({ mensagem: "Editar PIX", valorPadrao: Number(resumoAtual.pix || 0).toFixed(2) }))?.replace(",", "."));
+  const debito = Number((await showPrompt({ mensagem: "Editar Débito", valorPadrao: Number(resumoAtual.debito || 0).toFixed(2) }))?.replace(",", "."));
+  const credito = Number((await showPrompt({ mensagem: "Editar Crédito", valorPadrao: Number(resumoAtual.credito || 0).toFixed(2) }))?.replace(",", "."));
+  const ticket = Number((await showPrompt({ mensagem: "Editar Ticket", valorPadrao: Number(resumoAtual.ticket || 0).toFixed(2) }))?.replace(",", "."));
+  const cashback = Number((await showPrompt({ mensagem: "Editar Cashback", valorPadrao: Number(resumoAtual.cashback || 0).toFixed(2) }))?.replace(",", "."));
 
   if([dinheiro, pix, debito, credito, ticket, cashback].some((v)=>Number.isNaN(v) || v < 0)){
-    alert("Edição cancelada: informe apenas valores válidos.");
+    showAlert("Edição cancelada: informe apenas valores válidos.");
     return;
   }
 
@@ -284,18 +285,18 @@ async function editarFechamento(caixaId){
     editadoEm: new Date()
   });
 
-  alert("Fechamento editado com sucesso.");
+  showAlert("Fechamento editado com sucesso.");
   await carregarHistorico();
 }
 
 async function cancelarFechamento(caixaId){
-  const motivo = prompt("Motivo do cancelamento do fechamento:");
+  const motivo = await showPrompt({ mensagem: "Motivo do cancelamento do fechamento:" });
   if(!motivo || !motivo.trim()){
-    alert("Cancelamento precisa de um motivo.");
+    showAlert("Cancelamento precisa de um motivo.");
     return;
   }
 
-  const ok = confirm("Tem certeza que deseja cancelar este fechamento? Essa ação marca o fechamento como cancelado no histórico.");
+  const ok = await showConfirm("Tem certeza que deseja cancelar este fechamento? Essa ação marca o fechamento como cancelado no histórico.");
   if(!ok) return;
 
   await updateDoc(doc(db, "caixa", caixaId), {
@@ -305,7 +306,7 @@ async function cancelarFechamento(caixaId){
     motivoCancelamento: motivo.trim()
   });
 
-  alert("Fechamento cancelado com sucesso.");
+  showAlert("Fechamento cancelado com sucesso.");
   await carregarHistorico();
 }
 

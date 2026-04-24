@@ -7,12 +7,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { aplicarUsuarioLogado, exigirLogin } from "./layout.js";
+import { showAlert } from "./ui-feedback.js";
 
 const usuario = exigirLogin();
 aplicarUsuarioLogado();
 
 if(!usuario?.permissoes?.includes("admin")){
-  alert("Somente administradores podem acessar o histórico.");
+  showAlert("Somente administradores podem acessar o histórico.");
   window.location.href = "pdv.html";
 }
 
@@ -103,7 +104,7 @@ function abrirCancelamento(venda){
 async function confirmarCancelamento(){
   const motivo = motivoCancelamentoInput.value.trim();
   if(!motivo){
-    alert("Informe o motivo do cancelamento.");
+    showAlert("Informe o motivo do cancelamento.");
     return;
   }
 
@@ -121,7 +122,7 @@ async function confirmarCancelamento(){
   modalCancelar.classList.add("hidden");
   vendaParaCancelar = null;
   await carregarVendas();
-  alert("Venda cancelada com sucesso.");
+  showAlert("Venda cancelada com sucesso.");
 }
 
 function renderizarTabela(lista){

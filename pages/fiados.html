@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cobrança de Fiados</title>
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="icon" href="https://i.ibb.co/Rkmnnmwx/favicon-3.png" type="image/png">
+</head>
+<body>
+  <div class="layoutAdmin">
+    <aside class="sidebarAdmin">
+      <h2>Painel</h2>
+      <p class="sidebarUser" data-usuario-logado></p>
+      <nav>
+        <a href="dashboard.html" data-only-admin>Dashboard</a>
+        <a href="pdv.html">PDV</a>
+        <a href="caixa.html">Caixa</a>
+        <a href="produtos.html">Produtos</a>
+        <a href="entregador.html">Entregas</a>
+        <a href="historico.html" data-only-admin>Histórico</a>
+        <a href="fiados.html" class="ativo">Cobrança Fiado</a>
+        <a href="configuracoes.html">Configurações</a>
+      </nav>
+      <button id="logout" class="sidebarAction sair">Sair</button>
+    </aside>
+
+    <main class="conteudoAdmin">
+      <header>
+        <h1>Cobrança de clientes fiado</h1>
+        <p>Veja pendências e marque recebimentos.</p>
+      </header>
+      <section class="painelCard">
+        <input id="buscaFiado" placeholder="Buscar por cliente ou WhatsApp">
+        <div id="listaFiados"></div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="../js/fiados.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module">import { aplicarUsuarioLogado } from "../js/layout.js"; aplicarUsuarioLogado();</script>
+</body>
+</html>
