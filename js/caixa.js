@@ -885,7 +885,7 @@ window.fecharMesaSelecionada = async () => {
     return;
   }
 
-  const formas = ["dinheiro", "pix", "debito", "credito", "ticket", "cashback"];
+  const formas = ["dinheiro", "pix", "debito", "credito", "ticket", "cashback", "fiado"];
   opcoesPagamentoMesa.innerHTML = "";
 
   formas.forEach((forma) => {
@@ -909,26 +909,81 @@ async function confirmarFechamentoMesa(forma) {
     quantidade: Number(i.quantidade)
   }));
 
-  await addDoc(collection(db, "vendas"), {
+  let statusVenda = "finalizado";
+  let dadosFiado = null;
+
+  if (forma === "fiado") {
+    const cliente = (await showPrompt({
+      titulo: "Fiado da mesa",
+      mensagem: "Nome do cliente responsável:",
+      valorPadrao: `Cliente Mesa ${mesaSelecionada.numeroMesa}`,
+      placeholder: "Nome do cliente"
+    }))?.trim();
+
+    if (!cliente) {
+      showAlert("Informe o nome do cliente para registrar o fiado.");
+      return;
+    }
+
+    const whatsapp = (await showPrompt({
+      titulo: "Fiado da mesa",
+      mensagem: "WhatsApp do cliente:",
+      placeholder: "(xx) xxxxx-xxxx"
+    }))?.trim();
+
+    if (!whatsapp) {
+      showAlert("Informe o WhatsApp do cliente para registrar o fiado.");
+      return;
+    }
+
+    const observacao = (await showPrompt({
+      titulo: "Fiado da mesa",
+      mensagem: "Observação (opcional):",
+      placeholder: "Ex.: pagar sexta-feira"
+    }))?.trim() || "";
+
+    dadosFiado = { cliente, whatsapp, observacao };
+    statusVenda = "fiado";
+  }
+
+  const vendaRef = await addDoc(collection(db, "vendas"), {
     criadoEm: new Date(),
     pagamentos: [{ tipo: forma, valor: totalMesa }],
     troco: 0,
     idCaixa: caixaId,
     idUsuario: usuario.nome,
     nomeUsuario: usuario.nome,
-    cliente: `Mesa ${mesaSelecionada.numeroMesa}`,
+    cliente: dadosFiado?.cliente || `Mesa ${mesaSelecionada.numeroMesa}`,
+    whatsapp: dadosFiado?.whatsapp || "",
+    observacaoFiado: dadosFiado?.observacao || "",
     itens,
     subtotal: totalMesa,
     total: totalMesa,
     tipo: "mesa",
     mesaNumero: mesaSelecionada.numeroMesa,
-    status: "finalizado"
+    status: statusVenda,
+    fiadoStatus: forma === "fiado" ? "aberto" : null
   });
 
-  const caixaRef = doc(db, "caixa", caixaId);
-  const caixaSnap = await getDoc(caixaRef);
-  const saldoAtual = Number(caixaSnap.data()?.saldoAtual || 0);
-  await updateDoc(caixaRef, { saldoAtual: saldoAtual + totalMesa });
+  if (forma === "fiado" && dadosFiado) {
+    await addDoc(collection(db, "fiados"), {
+      cliente: dadosFiado.cliente,
+      whatsapp: dadosFiado.whatsapp,
+      observacao: dadosFiado.observacao || "",
+      total: totalMesa,
+      saldoPendente: totalMesa,
+      data: new Date(),
+      status: "pendente",
+      origem: "mesa",
+      mesaNumero: mesaSelecionada.numeroMesa,
+      vendaId: vendaRef.id
+    });
+  } else {
+    const caixaRef = doc(db, "caixa", caixaId);
+    const caixaSnap = await getDoc(caixaRef);
+    const saldoAtual = Number(caixaSnap.data()?.saldoAtual || 0);
+    await updateDoc(caixaRef, { saldoAtual: saldoAtual + totalMesa });
+  }
 
   await updateDoc(doc(db, "comandas", mesaSelecionada.id), {
     aberta: false,
