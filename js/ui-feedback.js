@@ -105,3 +105,61 @@ export function showPrompt({ mensagem, titulo = "Preencher", valorPadrao = "", p
     });
   });
 }
+
+export function showSelect({
+  mensagem,
+  titulo = "Selecionar",
+  opcoes = []
+}) {
+  return new Promise((resolve) => {
+    if (!Array.isArray(opcoes) || !opcoes.length) {
+      resolve(null);
+      return;
+    }
+
+    garantirEstilos();
+    const root = garantirRoot();
+    const overlay = document.createElement("div");
+    overlay.className = "appFeedbackOverlay";
+
+    const opcoesHtml = opcoes
+      .map(
+        (opcao, idx) =>
+          `<button class="appBtn appBtnSecundario" data-opcao="${idx}" style="width:100%;margin-bottom:8px;">${opcao.label}</button>`
+      )
+      .join("");
+
+    overlay.innerHTML = `
+      <div class="appFeedbackBox">
+        <h3>${titulo}</h3>
+        <p>${mensagem}</p>
+        <div>${opcoesHtml}</div>
+        <div class="appFeedbackActions">
+          <button class="appBtn appBtnSecundario" data-cancelar>Cancelar</button>
+        </div>
+      </div>
+    `;
+
+    const close = () => overlay.remove();
+    overlay.querySelectorAll("[data-opcao]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.getAttribute("data-opcao"));
+        resolve(opcoes[idx]?.valor ?? null);
+        close();
+      });
+    });
+
+    overlay.querySelector("[data-cancelar]")?.addEventListener("click", () => {
+      resolve(null);
+      close();
+    });
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target !== overlay) return;
+      resolve(null);
+      close();
+    });
+
+    root.appendChild(overlay);
+  });
+}

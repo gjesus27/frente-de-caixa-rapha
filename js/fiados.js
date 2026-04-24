@@ -1,6 +1,6 @@
 import { db } from "./firebaseConfig.js";
 import { aplicarUsuarioLogado, exigirLogin } from "./layout.js";
-import { showAlert, showConfirm, showPrompt } from "./ui-feedback.js";
+import { showAlert, showConfirm, showPrompt, showSelect } from "./ui-feedback.js";
 import {
   addDoc,
   collection,
@@ -19,6 +19,14 @@ const buscaFiado = document.getElementById("buscaFiado");
 const filtroStatusFiado = document.getElementById("filtroStatusFiado");
 let fiados = [];
 const FORMAS_PAGAMENTO = ["dinheiro", "pix", "debito", "credito", "ticket", "cashback"];
+const ROTULO_FORMAS = {
+  dinheiro: "Dinheiro",
+  pix: "PIX",
+  debito: "Débito",
+  credito: "Crédito",
+  ticket: "Ticket",
+  cashback: "Cashback"
+};
 
 function money(v) {
   return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -76,14 +84,15 @@ function renderizar() {
         return;
       }
 
-      const formaTxt = await showPrompt({
+      const forma = await showSelect({
         titulo: "Forma de pagamento",
-        mensagem: "Informe a forma (dinheiro, pix, debito, credito, ticket ou cashback).",
-        placeholder: "pix"
+        mensagem: "Selecione a forma usada para receber este fiado.",
+        opcoes: FORMAS_PAGAMENTO.map((tipo) => ({
+          valor: tipo,
+          label: ROTULO_FORMAS[tipo] || tipo
+        }))
       });
-      if (!formaTxt) return;
-
-      const forma = normalizar(formaTxt);
+      if (!forma) return;
       if (!FORMAS_PAGAMENTO.includes(forma)) {
         showAlert("Forma de pagamento inválida.");
         return;
