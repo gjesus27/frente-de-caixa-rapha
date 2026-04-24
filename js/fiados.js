@@ -1,14 +1,24 @@
 import { db } from "./firebaseConfig.js";
 import { aplicarUsuarioLogado, exigirLogin } from "./layout.js";
 import { showAlert, showConfirm, showPrompt } from "./ui-feedback.js";
-import { collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  query,
+  updateDoc,
+  where
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const usuario = exigirLogin();
 aplicarUsuarioLogado();
 
 const listaFiados = document.getElementById("listaFiados");
 const buscaFiado = document.getElementById("buscaFiado");
+const filtroStatusFiado = document.getElementById("filtroStatusFiado");
 let fiados = [];
+const FORMAS_PAGAMENTO = ["dinheiro", "pix", "debito", "credito", "ticket", "cashback"];
 
 function money(v) {
   return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -20,13 +30,16 @@ function normalizar(texto) {
 
 function renderizar() {
   const termo = normalizar(buscaFiado.value);
+  const filtroStatus = normalizar(filtroStatusFiado?.value || "aberto");
   const lista = fiados.filter((item) => {
     const alvo = `${item.cliente || ""} ${item.whatsapp || ""}`;
-    return normalizar(alvo).includes(termo);
+    const status = normalizar(item.fiadoStatus || "aberto");
+    const filtraStatus = filtroStatus === "todos" ? true : status === filtroStatus;
+    return normalizar(alvo).includes(termo) && filtraStatus;
   });
 
   if (!lista.length) {
-    listaFiados.innerHTML = "<p class='vazio'>Nenhum fiado pendente encontrado.</p>";
+    listaFiados.innerHTML = "<p class='vazio'>Nenhum fiado encontrado para este filtro.</p>";
     return;
   }
 
@@ -35,8 +48,11 @@ function renderizar() {
       <p><strong>Cliente:</strong> ${item.cliente || "-"}</p>
       <p><strong>WhatsApp:</strong> ${item.whatsapp || "-"}</p>
       <p><strong>Total:</strong> ${money(item.total)}</p>
-      <p><strong>Status:</strong> <span class="fiadoStatus">${item.fiadoStatus || "pendente"}</span></p>
-      <button class="btnPrimario" data-receber="${item.id}">Registrar cobrança</button>
+      <p><strong>Status:</strong> <span class="fiadoStatus ${normalizar(item.fiadoStatus) === "pago" ? "pago" : ""}">${item.fiadoStatus || "aberto"}</span></p>
+      ${normalizar(item.fiadoStatus) !== "pago"
+        ? `<button class="btnPrimario" data-receber="${item.id}">Registrar cobrança</button>`
+        : "<p><strong>Forma recebida:</strong> " + (item.fiadoFormaRecebimento || "-") + "</p>"
+      }
     </article>
   `).join("");
 
@@ -60,6 +76,25 @@ function renderizar() {
         return;
       }
 
+      const formaTxt = await showPrompt({
+        titulo: "Forma de pagamento",
+        mensagem: "Informe a forma (dinheiro, pix, debito, credito, ticket ou cashback).",
+        placeholder: "pix"
+      });
+      if (!formaTxt) return;
+
+      const forma = normalizar(formaTxt);
+      if (!FORMAS_PAGAMENTO.includes(forma)) {
+        showAlert("Forma de pagamento inválida.");
+        return;
+      }
+
+      const caixaDoDia = await obterCaixaAbertoDoUsuario();
+      if (!caixaDoDia) {
+        showAlert("Abra o caixa para registrar o recebimento do fiado.");
+        return;
+      }
+
       const ok = await showConfirm("Confirmar baixa desta cobrança?");
       if (!ok) return;
 
@@ -67,13 +102,56 @@ function renderizar() {
         fiadoStatus: "pago",
         fiadoPagoEm: new Date(),
         fiadoPagoPor: usuario?.nome || "sistema",
-        fiadoValorRecebido: valor
+        fiadoValorRecebido: valor,
+        fiadoFormaRecebimento: forma
+      });
+
+      await addDoc(collection(db, "vendas"), {
+        criadoEm: new Date(),
+        pagamentos: [{ tipo: forma, valor }],
+        troco: 0,
+        idCaixa: caixaDoDia.id,
+        idUsuario: usuario?.nome || "sistema",
+        nomeUsuario: usuario?.nome || "sistema",
+        cliente: alvo.cliente || "Cliente fiado",
+        total: valor,
+        subtotal: valor,
+        tipo: "recebimento_fiado",
+        status: "finalizado",
+        referenciaVendaFiadoId: alvo.id
+      });
+
+      await updateDoc(doc(db, "caixa", caixaDoDia.id), {
+        saldoAtual: Number(caixaDoDia.saldoAtual || 0) + valor
       });
 
       showAlert("Cobrança registrada com sucesso.");
       await carregarFiados();
     });
   });
+}
+
+async function obterCaixaAbertoDoUsuario() {
+  const q = query(
+    collection(db, "caixa"),
+    where("usuario", "==", usuario?.nome || ""),
+    where("aberto", "==", true)
+  );
+  const snap = await getDocs(q);
+  let caixa = null;
+  snap.forEach((d) => {
+    const atual = { id: d.id, ...d.data() };
+    if (!caixa) {
+      caixa = atual;
+      return;
+    }
+
+    const dataAtual = new Date(atual.dataAbertura?.seconds ? atual.dataAbertura.seconds * 1000 : atual.dataAbertura || 0).getTime();
+    const dataCaixa = new Date(caixa.dataAbertura?.seconds ? caixa.dataAbertura.seconds * 1000 : caixa.dataAbertura || 0).getTime();
+    if (dataAtual > dataCaixa) caixa = atual;
+  });
+
+  return caixa;
 }
 
 async function carregarFiados() {
@@ -83,8 +161,8 @@ async function carregarFiados() {
   snap.forEach((docSnap) => {
     const venda = { id: docSnap.id, ...docSnap.data() };
     const ehFiado = String(venda.pagamentos?.[0]?.tipo || venda.formaPagamento || "").toLowerCase() === "fiado";
-    const status = String(venda.fiadoStatus || "pendente").toLowerCase();
-    if (ehFiado && status !== "pago") fiados.push(venda);
+    const status = String(venda.fiadoStatus || "aberto").toLowerCase();
+    if (ehFiado) fiados.push({ ...venda, fiadoStatus: status });
   });
 
   fiados.sort((a, b) => {
@@ -97,4 +175,5 @@ async function carregarFiados() {
 }
 
 buscaFiado?.addEventListener("input", renderizar);
+filtroStatusFiado?.addEventListener("change", renderizar);
 carregarFiados();

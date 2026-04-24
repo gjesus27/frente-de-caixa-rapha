@@ -18,7 +18,14 @@
         <p>Veja pendências e marque recebimentos.</p>
       </header>
       <section class="painelCard">
-        <input id="buscaFiado" class="fiadoBusca" placeholder="Buscar por cliente ou WhatsApp">
+        <div class="fiadoFiltros">
+          <input id="buscaFiado" class="fiadoBusca" placeholder="Buscar por cliente ou WhatsApp">
+          <select id="filtroStatusFiado" class="fiadoFiltroStatus" aria-label="Filtrar por status">
+            <option value="aberto">Em aberto</option>
+            <option value="pago">Pago</option>
+            <option value="todos">Todos</option>
+          </select>
+        </div>
         <div id="listaFiados" class="listaFiados"></div>
       </section>
     </main>
