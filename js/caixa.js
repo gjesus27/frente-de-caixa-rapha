@@ -15,6 +15,7 @@ const produtosDiv = document.getElementById("produtos");
 const carrinhoDiv = document.getElementById("carrinho");
 const totalSpan = document.getElementById("total");
 const pesquisaInput = document.getElementById("pesquisaProduto");
+const pesquisaMesaInput = document.getElementById("pesquisaProdutoMesa");
 const categoriasDiv = document.getElementById("categorias");
 const nomeClienteInput = document.getElementById("nomeCliente");
 const modalPagamentoMesa = document.getElementById("modalPagamentoMesa");
@@ -38,6 +39,7 @@ let caixaAberto = false;
 
 let mesasAbertas = [];
 let mesaSelecionada = null;
+let mesasCarregadas = false;
 
 const formatarMoeda = (valor) => `R$ ${Number(valor || 0).toFixed(2)}`;
 
@@ -137,6 +139,14 @@ function getProdutosFiltrados() {
 
     return byNome && byCategoria;
   });
+}
+
+function getProdutosMesaFiltrados() {
+  const termoMesa = (pesquisaMesaInput?.value || "").trim().toLowerCase();
+
+  return getProdutosFiltrados().filter((p) =>
+    p.nome.toLowerCase().includes(termoMesa)
+  );
 }
 
 function renderProdutos() {
@@ -649,6 +659,7 @@ window.alternarModoPdv = (modo) => {
     btnM.classList.add("ativo");
     btnB.classList.remove("ativo");
     carregarMesas();
+    renderProdutosMesa();
   } else {
     mesas.classList.add("hidden");
     balcao.classList.remove("hidden");
@@ -667,6 +678,12 @@ async function carregarMesas() {
   mesasAbertas.sort(
     (a, b) => Number(a.numeroMesa || 0) - Number(b.numeroMesa || 0)
   );
+  mesasCarregadas = true;
+
+  if (mesaSelecionada?.id) {
+    mesaSelecionada =
+      mesasAbertas.find((mesa) => mesa.id === mesaSelecionada.id) || null;
+  }
 
   renderMesas();
 }
@@ -733,8 +750,13 @@ function renderProdutosMesa() {
   const div = document.getElementById("produtosMesa");
   if (!div) return;
 
-  const filtrados = getProdutosFiltrados();
+  const filtrados = getProdutosMesaFiltrados();
   div.innerHTML = "";
+
+  if (!filtrados.length) {
+    div.innerHTML = "<p>Nenhum produto encontrado para a mesa.</p>";
+    return;
+  }
 
   filtrados.forEach((p) => {
     const b = document.createElement("button");
@@ -779,7 +801,6 @@ async function adicionarProdutoMesa(produto) {
 
   mesaSelecionada = { ...mesaSelecionada, itens, total: totalMesa };
   await carregarMesas();
-  renderMesaDetalhe();
 }
 
 window.removerItemMesa = async (idProduto) => {
@@ -805,7 +826,6 @@ window.removerItemMesa = async (idProduto) => {
 
   mesaSelecionada = { ...mesaSelecionada, itens, total: totalMesa };
   await carregarMesas();
-  renderMesaDetalhe();
 };
 
 function renderMesaDetalhe() {
@@ -924,6 +944,9 @@ async function confirmarFechamentoMesa(forma) {
 
 window.filtrarProdutos = () => {
   renderProdutos();
+};
+
+window.filtrarProdutosMesa = () => {
   renderProdutosMesa();
 };
 
@@ -935,7 +958,9 @@ async function iniciar() {
   await carregarCaixaAberto();
   await carregarCategoriasSistema();
   await carregarProdutos();
-  await carregarMesas();
+  if (!mesasCarregadas) {
+    renderMesas();
+  }
   renderCarrinho();
 }
 
