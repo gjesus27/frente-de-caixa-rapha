@@ -26,16 +26,16 @@ function renderizar() {
   });
 
   if (!lista.length) {
-    listaFiados.innerHTML = "<p>Nenhum fiado pendente encontrado.</p>";
+    listaFiados.innerHTML = "<p class='vazio'>Nenhum fiado pendente encontrado.</p>";
     return;
   }
 
   listaFiados.innerHTML = lista.map((item) => `
-    <article class="cardHistorico" style="margin-top:12px;">
+    <article class="fiadoCard">
       <p><strong>Cliente:</strong> ${item.cliente || "-"}</p>
       <p><strong>WhatsApp:</strong> ${item.whatsapp || "-"}</p>
       <p><strong>Total:</strong> ${money(item.total)}</p>
-      <p><strong>Status:</strong> ${item.fiadoStatus || "pendente"}</p>
+      <p><strong>Status:</strong> <span class="fiadoStatus">${item.fiadoStatus || "pendente"}</span></p>
       <button class="btnPrimario" data-receber="${item.id}">Registrar cobrança</button>
     </article>
   `).join("");
