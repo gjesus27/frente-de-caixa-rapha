@@ -4,16 +4,23 @@ import {
   addDoc,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
+let usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
 if (!usuario) window.location.href = "login.html";
 
-const isAdmin = Boolean(usuario?.permissoes?.includes("admin"));
 const adminAreas = document.querySelectorAll("[data-admin-area]");
-if (!isAdmin) adminAreas.forEach((el) => (el.style.display = "none"));
+let isAdmin = false;
+
+function atualizarVisibilidadeAdmin() {
+  isAdmin = Boolean(usuario?.permissoes?.includes("admin"));
+  adminAreas.forEach((el) => {
+    el.style.display = isAdmin ? "" : "none";
+  });
+}
 
 const paginasDisponiveis = ["dashboard", "pdv", "caixa", "produtos", "entregador", "historico", "configuracoes"];
 
@@ -29,6 +36,20 @@ const listaCategorias = document.getElementById("listaCategorias");
 
 let usuarios = [];
 let categorias = [];
+
+async function sincronizarUsuarioLogado() {
+  if (!usuario?.id) return;
+
+  try {
+    const snap = await getDoc(doc(db, "usuarios", usuario.id));
+    if (!snap.exists()) return;
+
+    usuario = { id: snap.id, ...snap.data() };
+    localStorage.setItem("usuarioLogado", JSON.stringify(usuario));
+  } catch (erro) {
+    console.error("Falha ao sincronizar usuário logado:", erro);
+  }
+}
 
 function carregarMeuPerfil() {
   meuFoto.value = usuario?.foto || "";
@@ -52,8 +73,8 @@ async function salvarPerfil(idAlvo = usuario.id, sobrescrever = {}) {
   await updateDoc(doc(db, "usuarios", idAlvo), payload);
 
   if (idAlvo === usuario.id) {
-    const atualizado = { ...usuario, ...payload };
-    localStorage.setItem("usuarioLogado", JSON.stringify(atualizado));
+    usuario = { ...usuario, ...payload };
+    localStorage.setItem("usuarioLogado", JSON.stringify(usuario));
   }
 }
 
@@ -63,28 +84,34 @@ salvarMeuPerfil?.addEventListener("click", async () => {
     return;
   }
 
-  await salvarPerfil();
-  minhaSenha.value = "";
-  alert("Perfil atualizado.");
+  try {
+    await salvarPerfil();
+    minhaSenha.value = "";
+    alert("Perfil atualizado.");
+  } catch (erro) {
+    console.error("Erro ao salvar perfil:", erro);
+    alert("Não foi possível salvar seu perfil agora.");
+  }
 });
 
 async function carregarUsuariosAdmin() {
   if (!isAdmin || !listaUsuariosAdmin) return;
 
-  const snap = await getDocs(collection(db, "usuarios"));
-  usuarios = [];
-  snap.forEach((d) => usuarios.push({ id: d.id, ...d.data() }));
+  try {
+    const snap = await getDocs(collection(db, "usuarios"));
+    usuarios = [];
+    snap.forEach((d) => usuarios.push({ id: d.id, ...d.data() }));
 
-  listaUsuariosAdmin.innerHTML = "";
+    listaUsuariosAdmin.innerHTML = "";
 
-  usuarios.forEach((u) => {
-    const div = document.createElement("article");
-    div.className = "userCard";
+    usuarios.forEach((u) => {
+      const div = document.createElement("article");
+      div.className = "userCard";
 
-    const permissoes = Array.isArray(u.permissoes) ? u.permissoes : [];
-    const permissoesPaginas = Array.isArray(u.permissoesPaginas) ? u.permissoesPaginas : paginasDisponiveis;
+      const permissoes = Array.isArray(u.permissoes) ? u.permissoes : [];
+      const permissoesPaginas = Array.isArray(u.permissoesPaginas) ? u.permissoesPaginas : paginasDisponiveis;
 
-    div.innerHTML = `
+      div.innerHTML = `
       <div class="userHead">
         <img src="${u.foto || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}" alt="${u.nome}">
         <strong>${u.nome || "Usuário"}</strong>
@@ -114,65 +141,86 @@ async function carregarUsuariosAdmin() {
       <div class="acoesUser"><button class="btnPrimario" data-salvar="${u.id}">Salvar usuário</button></div>
     `;
 
-    listaUsuariosAdmin.appendChild(div);
-  });
+      listaUsuariosAdmin.appendChild(div);
+    });
 
-  listaUsuariosAdmin.querySelectorAll("[data-salvar]").forEach((btn) => {
-    btn.onclick = async () => {
-      const card = btn.closest(".userCard");
-      const id = btn.dataset.salvar;
+    listaUsuariosAdmin.querySelectorAll("[data-salvar]").forEach((btn) => {
+      btn.onclick = async () => {
+        const card = btn.closest(".userCard");
+        const id = btn.dataset.salvar;
 
-      const nome = card.querySelector('[data-field="nome"]').value.trim();
-      const foto = card.querySelector('[data-field="foto"]').value.trim();
-      const senha = card.querySelector('[data-field="senha"]').value.trim();
+        const nome = card.querySelector('[data-field="nome"]').value.trim();
+        const foto = card.querySelector('[data-field="foto"]').value.trim();
+        const senha = card.querySelector('[data-field="senha"]').value.trim();
 
-      const novasPermissoes = ["admin", "caixa", "entregador"].filter((role) =>
-        card.querySelector(`[data-role="${role}"]`).checked
-      );
+        const novasPermissoes = ["admin", "caixa", "entregador"].filter((role) =>
+          card.querySelector(`[data-role="${role}"]`).checked
+        );
 
-      const paginas = paginasDisponiveis.filter((pagina) =>
-        card.querySelector(`[data-page="${pagina}"]`).checked
-      );
+        const paginas = paginasDisponiveis.filter((pagina) =>
+          card.querySelector(`[data-page="${pagina}"]`).checked
+        );
 
-      const payload = { nome, foto, permissoes: novasPermissoes, permissoesPaginas: paginas };
-      if (senha) payload.senha = senha;
+        const payload = { nome, foto, permissoes: novasPermissoes, permissoesPaginas: paginas };
+        if (senha) payload.senha = senha;
 
-      await updateDoc(doc(db, "usuarios", id), payload);
+        await updateDoc(doc(db, "usuarios", id), payload);
 
-      if (usuario.id === id) {
-        localStorage.setItem("usuarioLogado", JSON.stringify({ ...usuario, ...payload }));
-      }
+        if (usuario.id === id) {
+          usuario = { ...usuario, ...payload };
+          localStorage.setItem("usuarioLogado", JSON.stringify(usuario));
+          atualizarVisibilidadeAdmin();
+        }
 
-      alert("Usuário atualizado.");
-    };
-  });
+        alert("Usuário atualizado.");
+      };
+    });
+  } catch (erro) {
+    console.error("Erro ao carregar usuários:", erro);
+    listaUsuariosAdmin.innerHTML = "<p>Não foi possível carregar os usuários agora.</p>";
+  }
 }
 
 async function carregarCategorias() {
   if (!isAdmin || !listaCategorias) return;
 
-  const snap = await getDocs(collection(db, "categoriasProduto"));
-  categorias = [];
-  snap.forEach((d) => categorias.push({ id: d.id, ...d.data() }));
-  categorias.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+  try {
+    const snap = await getDocs(collection(db, "categoriasProduto"));
+    categorias = [];
+    snap.forEach((d) => categorias.push({ id: d.id, ...d.data() }));
+    categorias.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
 
-  listaCategorias.innerHTML = "";
-  categorias.forEach((cat) => {
-    const chip = document.createElement("div");
-    chip.className = "tagCategoria";
-    chip.innerHTML = `<span>${cat.nome}</span><button data-remover="${cat.id}">x</button>`;
-    listaCategorias.appendChild(chip);
-  });
+    listaCategorias.innerHTML = "";
+    categorias.forEach((cat) => {
+      const chip = document.createElement("div");
+      chip.className = "tagCategoria";
+      chip.innerHTML = `<span>${cat.nome}</span><button data-remover="${cat.id}">x</button>`;
+      listaCategorias.appendChild(chip);
+    });
 
-  listaCategorias.querySelectorAll("[data-remover]").forEach((btn) => {
-    btn.onclick = async () => {
-      await deleteDoc(doc(db, "categoriasProduto", btn.dataset.remover));
-      carregarCategorias();
-    };
-  });
+    listaCategorias.querySelectorAll("[data-remover]").forEach((btn) => {
+      btn.onclick = async () => {
+        try {
+          await deleteDoc(doc(db, "categoriasProduto", btn.dataset.remover));
+          carregarCategorias();
+        } catch (erro) {
+          console.error("Erro ao remover categoria:", erro);
+          alert("Não foi possível remover essa categoria.");
+        }
+      };
+    });
+  } catch (erro) {
+    console.error("Erro ao carregar categorias:", erro);
+    listaCategorias.innerHTML = "<p>Não foi possível carregar as categorias agora.</p>";
+  }
 }
 
 adicionarCategoria?.addEventListener("click", async () => {
+  if (!isAdmin) {
+    alert("Apenas administradores podem salvar categorias.");
+    return;
+  }
+
   const nome = novaCategoria.value.trim();
   if (!nome) return;
 
@@ -182,11 +230,22 @@ adicionarCategoria?.addEventListener("click", async () => {
     return;
   }
 
-  await addDoc(collection(db, "categoriasProduto"), { nome, criadoEm: new Date() });
-  novaCategoria.value = "";
-  carregarCategorias();
+  try {
+    await addDoc(collection(db, "categoriasProduto"), { nome, criadoEm: new Date() });
+    novaCategoria.value = "";
+    carregarCategorias();
+  } catch (erro) {
+    console.error("Erro ao salvar categoria:", erro);
+    alert("Não foi possível salvar a categoria agora.");
+  }
 });
 
-carregarMeuPerfil();
-carregarUsuariosAdmin();
-carregarCategorias();
+async function inicializarPagina() {
+  await sincronizarUsuarioLogado();
+  atualizarVisibilidadeAdmin();
+  carregarMeuPerfil();
+  carregarUsuariosAdmin();
+  carregarCategorias();
+}
+
+inicializarPagina();
