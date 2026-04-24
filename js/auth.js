@@ -42,16 +42,6 @@ if(listaUsuarios){
       return true;
     }
 
-    if(pagina.includes("dashboard.html") && !temPermissao("admin")){
-      showAlert("Sem acesso ao dashboard");
-      window.location.href = "pdv.html";
-    }
-
-    if(pagina.includes("historico.html") && !temPermissao("admin")){
-      showAlert("Sem acesso ao histórico");
-      window.location.href = "pdv.html";
-    }
-
     const bloqueado =
       validarPagina("configuracoes", "Sem acesso às configurações") ||
       validarPagina("pdv", "Sem acesso ao PDV") ||

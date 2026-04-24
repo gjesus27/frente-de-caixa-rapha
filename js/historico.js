@@ -12,11 +12,6 @@ import { showAlert } from "./ui-feedback.js";
 const usuario = exigirLogin();
 aplicarUsuarioLogado();
 
-if(!usuario?.permissoes?.includes("admin")){
-  showAlert("Somente administradores podem acessar o histórico.");
-  window.location.href = "pdv.html";
-}
-
 const tabelaVendas = document.getElementById("tabelaVendas");
 const estadoVazio = document.getElementById("estadoVazio");
 const tabelaWrapper = document.getElementById("tabelaWrapper");
@@ -219,10 +214,5 @@ filtroStatus.addEventListener("change", filtrarVendas);
 btnFecharDetalhes.addEventListener("click", () => modalDetalhes.classList.add("hidden"));
 btnFecharCancelar.addEventListener("click", () => modalCancelar.classList.add("hidden"));
 btnConfirmarCancelamento.addEventListener("click", confirmarCancelamento);
-
-document.getElementById("logout").addEventListener("click", () => {
-  localStorage.removeItem("usuarioLogado");
-  window.location.href = "login.html";
-});
 
 carregarVendas();

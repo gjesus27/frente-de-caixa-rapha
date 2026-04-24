@@ -31,8 +31,9 @@
   </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script type="module" src="../js/entregador.js"></script>
+<script type="module">import { exigirLogin, montarSidebar, aplicarUsuarioLogado } from "../js/layout.js"; exigirLogin(); montarSidebar(); aplicarUsuarioLogado();</script>
+  <script type="module" src="../js/entregador.js"></script>
+
 <script type="module" src="../js/auth.js"></script>
-<script type="module">import { montarSidebar, aplicarUsuarioLogado } from "../js/layout.js"; montarSidebar(); aplicarUsuarioLogado();</script>
 </body>
 </html>
