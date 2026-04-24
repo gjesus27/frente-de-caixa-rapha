@@ -9,6 +9,7 @@ import {
   updateDoc,
   where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { showAlert, showPrompt } from "./ui-feedback.js";
 
 const produtosDiv = document.getElementById("produtos");
 const carrinhoDiv = document.getElementById("carrinho");
@@ -21,6 +22,7 @@ const opcoesPagamentoMesa = document.getElementById("opcoesPagamentoMesa");
 const cancelarPagamentoMesa = document.getElementById("cancelarPagamentoMesa");
 const modalFiado = document.getElementById("modalFiado");
 const fiadoClienteInput = document.getElementById("fiadoCliente");
+const fiadoWhatsappInput = document.getElementById("fiadoWhatsapp");
 const fiadoObservacaoInput = document.getElementById("fiadoObservacao");
 const confirmarFiadoBtn = document.getElementById("confirmarFiado");
 const cancelarFiadoBtn = document.getElementById("cancelarFiado");
@@ -29,6 +31,7 @@ let listaProdutos = [];
 let carrinho = [];
 let total = 0;
 let categoriaSelecionada = "todas";
+let categoriasSistema = [];
 
 let caixaId = null;
 let caixaAberto = false;
@@ -77,7 +80,7 @@ async function carregarCaixaAberto() {
   const snapshot = await getDocs(q);
 
   if (snapshot.empty) {
-    alert("Abra o caixa na tela de Caixa antes de vender.");
+    showAlert("Abra o caixa na tela de Caixa antes de vender.");
     caixaAberto = false;
     return;
   }
@@ -112,6 +115,16 @@ async function carregarProdutos() {
   renderCategorias();
   renderProdutos();
   renderProdutosMesa();
+}
+
+async function carregarCategoriasSistema() {
+  const snapshot = await getDocs(collection(db, "categoriasProduto"));
+  categoriasSistema = ["todas"];
+  snapshot.forEach((docSnap) => {
+    const nome = String(docSnap.data()?.nome || "").trim().toLowerCase();
+    if (nome) categoriasSistema.push(nome);
+  });
+  categoriasSistema = [...new Set(categoriasSistema)].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
 function getProdutosFiltrados() {
@@ -164,7 +177,9 @@ function renderProdutos() {
 function renderCategorias() {
   if (!categoriasDiv) return;
 
-  const categorias = ["todas", ...new Set(listaProdutos.map((p) => p.categoria || "outros"))];
+  const categorias = categoriasSistema.length
+    ? categoriasSistema
+    : ["todas", ...new Set(listaProdutos.map((p) => p.categoria || "outros"))];
   categoriasDiv.innerHTML = "";
 
   categorias.forEach((cat) => {
@@ -252,7 +267,7 @@ function renderCarrinho() {
 
 window.imprimirReciboPedido = () => {
   if (!carrinho.length) {
-    alert("Adicione itens no carrinho para emitir o recibo.");
+    showAlert("Adicione itens no carrinho para emitir o recibo.");
     return;
   }
 
@@ -400,7 +415,7 @@ window.imprimirReciboPedido = () => {
 
   const janela = window.open("", "_blank", "width=480,height=720");
   if (!janela) {
-    alert("Não foi possível abrir a janela de impressão.");
+    showAlert("Não foi possível abrir a janela de impressão.");
     return;
   }
 
@@ -411,12 +426,12 @@ window.imprimirReciboPedido = () => {
 
 async function finalizarVendaCompleta(pagamentos, troco = 0) {
   if (!caixaAberto || !caixaId) {
-    alert("Abra o caixa antes de vender.");
+    showAlert("Abra o caixa antes de vender.");
     return;
   }
 
   if (!carrinho.length) {
-    alert("Carrinho vazio.");
+    showAlert("Carrinho vazio.");
     return;
   }
 
@@ -461,7 +476,7 @@ async function finalizarVendaCompleta(pagamentos, troco = 0) {
     await updateDoc(pRef, { estoque: novoEstoque });
   }
 
-  alert("Venda finalizada com sucesso.");
+  showAlert("Venda finalizada com sucesso.");
   carrinho = [];
 
   if (nomeClienteInput) nomeClienteInput.value = "";
@@ -474,19 +489,26 @@ async function finalizarVendaCompleta(pagamentos, troco = 0) {
 
 window.abrirModalFiado = () => {
   if (total <= 0) {
-    alert("Carrinho vazio.");
+    showAlert("Carrinho vazio.");
     return;
   }
 
   fiadoClienteInput.value = nomeClienteInput?.value?.trim() || "";
+  fiadoWhatsappInput.value = "";
   fiadoObservacaoInput.value = "";
   abrirModal(modalFiado);
 };
 
 async function registrarFiado() {
   const cliente = fiadoClienteInput.value.trim();
+  const whatsapp = fiadoWhatsappInput.value.trim();
   if (!cliente) {
-    alert("Informe o nome do cliente fiado.");
+    showAlert("Informe o nome do cliente fiado.");
+    return;
+  }
+
+  if (!whatsapp) {
+    showAlert("Informe o WhatsApp do cliente para registrar o fiado.");
     return;
   }
 
@@ -500,6 +522,7 @@ async function registrarFiado() {
 
   await addDoc(collection(db, "fiados"), {
     cliente,
+    whatsapp,
     observacao,
     total,
     saldoPendente: total,
@@ -518,6 +541,7 @@ async function registrarFiado() {
     idUsuario: usuario.nome,
     nomeUsuario: usuario.nome,
     cliente,
+    whatsapp,
     observacao,
     itens,
     subtotal: total,
@@ -540,27 +564,30 @@ async function registrarFiado() {
   fecharModal(modalFiado);
   await carregarProdutos();
   renderCarrinho();
-  alert("Fiado registrado com sucesso.");
+  showAlert("Fiado registrado com sucesso.");
 }
 
 window.pagarSimples = async (tipo) => {
   if (total <= 0) {
-    alert("Carrinho vazio.");
+    showAlert("Carrinho vazio.");
     return;
   }
 
   if (tipo === "dinheiro") {
-    const recebido = Number(
-      prompt(`Total R$ ${total.toFixed(2)}\nValor recebido em dinheiro:`)
-    );
+    const recebidoTxt = await showPrompt({
+      titulo: "Pagamento em dinheiro",
+      mensagem: `Total R$ ${total.toFixed(2)}\nValor recebido em dinheiro:`,
+      placeholder: "0,00"
+    });
+    const recebido = Number((recebidoTxt || "").replace(",", "."));
 
-    if (!recebido) {
-      alert("Pagamento cancelado.");
+    if (!recebidoTxt) {
+      showAlert("Pagamento cancelado.");
       return;
     }
 
     if (recebido < total) {
-      alert("Valor recebido é menor que o total.");
+      showAlert("Valor recebido é menor que o total.");
       return;
     }
 
@@ -576,13 +603,15 @@ window.pagarSimples = async (tipo) => {
 
 window.abrirPagamentoMisto = async () => {
   if (total <= 0) {
-    alert("Carrinho vazio.");
+    showAlert("Carrinho vazio.");
     return;
   }
 
-  const entrada = prompt(
-    "Pagamento misto. Digite no formato pix:20,dinheiro:10"
-  );
+  const entrada = await showPrompt({
+    titulo: "Pagamento misto",
+    mensagem: "Digite no formato pix:20,dinheiro:10",
+    placeholder: "pix:20,dinheiro:10"
+  });
   if (!entrada) return;
 
   const pagamentos = entrada
@@ -601,7 +630,7 @@ window.abrirPagamentoMisto = async () => {
   const pago = pagamentos.reduce((s, p) => s + p.valor, 0);
 
   if (pago < total) {
-    alert("Valor pago menor que o total.");
+    showAlert("Valor pago menor que o total.");
     return;
   }
 
@@ -677,14 +706,14 @@ window.abrirMesa = async () => {
   const numero = Number(document.getElementById("numeroMesa")?.value);
 
   if (!numero) {
-    alert("Informe o número da mesa.");
+    showAlert("Informe o número da mesa.");
     return;
   }
 
   const existe = mesasAbertas.find((m) => Number(m.numeroMesa) === numero);
 
   if (existe) {
-    alert("Essa mesa já está aberta.");
+    showAlert("Essa mesa já está aberta.");
     return;
   }
 
@@ -717,7 +746,7 @@ function renderProdutosMesa() {
 
 async function adicionarProdutoMesa(produto) {
   if (!mesaSelecionada) {
-    alert("Selecione uma mesa.");
+    showAlert("Selecione uma mesa.");
     return;
   }
 
@@ -821,18 +850,18 @@ function renderMesaDetalhe() {
 
 window.fecharMesaSelecionada = async () => {
   if (!mesaSelecionada) {
-    alert("Selecione uma mesa.");
+    showAlert("Selecione uma mesa.");
     return;
   }
 
   if (!caixaAberto || !caixaId) {
-    alert("Abra o caixa antes de fechar a mesa.");
+    showAlert("Abra o caixa antes de fechar a mesa.");
     return;
   }
 
   const totalMesa = Number(mesaSelecionada.total || 0);
   if (totalMesa <= 0) {
-    alert("Mesa sem itens.");
+    showAlert("Mesa sem itens.");
     return;
   }
 
@@ -888,7 +917,7 @@ async function confirmarFechamentoMesa(forma) {
   });
 
   fecharModal(modalPagamentoMesa);
-  alert(`Mesa ${mesaSelecionada.numeroMesa} fechada com sucesso.`);
+  showAlert(`Mesa ${mesaSelecionada.numeroMesa} fechada com sucesso.`);
   mesaSelecionada = null;
   await carregarMesas();
 }
@@ -904,6 +933,7 @@ confirmarFiadoBtn?.addEventListener("click", registrarFiado);
 
 async function iniciar() {
   await carregarCaixaAberto();
+  await carregarCategoriasSistema();
   await carregarProdutos();
   await carregarMesas();
   renderCarrinho();

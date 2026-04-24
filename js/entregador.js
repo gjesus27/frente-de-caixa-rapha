@@ -6,6 +6,7 @@ updateDoc,
 doc,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { showAlert } from "./ui-feedback.js";
 
 /* =========================
 ELEMENTOS
@@ -227,7 +228,7 @@ window.abrirRota = function(lat,lng){
 
 if(!lat || !lng){
 
-alert("Localização não disponível");
+showAlert("Localização não disponível");
 return;
 
 }
@@ -246,7 +247,7 @@ function iniciarGPS(){
 
 if(!navigator.geolocation){
 
-alert("GPS não suportado");
+showAlert("GPS não suportado");
 return;
 
 }
@@ -295,7 +296,7 @@ temEntrega:false
 
 });
 
-alert("Entrega finalizada");
+showAlert("Entrega finalizada");
 
 entregaAtualId=null;
 
@@ -320,4 +321,3 @@ filtroStatus="entregue";
 ouvirEntregas();
 
 };
-

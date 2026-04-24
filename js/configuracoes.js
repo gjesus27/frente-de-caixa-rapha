@@ -8,6 +8,7 @@ import {
   getDocs,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { showAlert } from "./ui-feedback.js";
 
 let usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
 if (!usuario) window.location.href = "login.html";
@@ -22,7 +23,7 @@ function atualizarVisibilidadeAdmin() {
   });
 }
 
-const paginasDisponiveis = ["dashboard", "pdv", "caixa", "produtos", "entregador", "historico", "configuracoes"];
+const paginasDisponiveis = ["dashboard", "pdv", "caixa", "produtos", "entregador", "historico", "fiados", "configuracoes"];
 
 const meuFoto = document.getElementById("meuFoto");
 const meuNome = document.getElementById("meuNome");
@@ -66,7 +67,7 @@ async function salvarPerfil(idAlvo = usuario.id, sobrescrever = {}) {
   if (senha) payload.senha = senha;
 
   if (!payload.nome) {
-    alert("Nome é obrigatório.");
+    showAlert("Nome é obrigatório.");
     return;
   }
 
@@ -80,17 +81,17 @@ async function salvarPerfil(idAlvo = usuario.id, sobrescrever = {}) {
 
 salvarMeuPerfil?.addEventListener("click", async () => {
   if (!usuario?.id) {
-    alert("Faça login novamente para atualizar seu perfil.");
+    showAlert("Faça login novamente para atualizar seu perfil.");
     return;
   }
 
   try {
     await salvarPerfil();
     minhaSenha.value = "";
-    alert("Perfil atualizado.");
+    showAlert("Perfil atualizado.");
   } catch (erro) {
     console.error("Erro ao salvar perfil:", erro);
-    alert("Não foi possível salvar seu perfil agora.");
+    showAlert("Não foi possível salvar seu perfil agora.");
   }
 });
 
@@ -172,7 +173,7 @@ async function carregarUsuariosAdmin() {
           atualizarVisibilidadeAdmin();
         }
 
-        alert("Usuário atualizado.");
+        showAlert("Usuário atualizado.");
       };
     });
   } catch (erro) {
@@ -205,7 +206,7 @@ async function carregarCategorias() {
           carregarCategorias();
         } catch (erro) {
           console.error("Erro ao remover categoria:", erro);
-          alert("Não foi possível remover essa categoria.");
+          showAlert("Não foi possível remover essa categoria.");
         }
       };
     });
@@ -217,7 +218,7 @@ async function carregarCategorias() {
 
 adicionarCategoria?.addEventListener("click", async () => {
   if (!isAdmin) {
-    alert("Apenas administradores podem salvar categorias.");
+    showAlert("Apenas administradores podem salvar categorias.");
     return;
   }
 
@@ -226,7 +227,7 @@ adicionarCategoria?.addEventListener("click", async () => {
 
   const existe = categorias.some((cat) => String(cat.nome || "").toLowerCase() === nome.toLowerCase());
   if (existe) {
-    alert("Essa categoria já existe.");
+    showAlert("Essa categoria já existe.");
     return;
   }
 
@@ -236,7 +237,7 @@ adicionarCategoria?.addEventListener("click", async () => {
     carregarCategorias();
   } catch (erro) {
     console.error("Erro ao salvar categoria:", erro);
-    alert("Não foi possível salvar a categoria agora.");
+    showAlert("Não foi possível salvar a categoria agora.");
   }
 });
 
