@@ -249,6 +249,18 @@ select{
   cursor:pointer;
 }
 
+.btnDesconto{
+  margin-top:10px;
+  width:100%;
+  border:1px solid #d1d5db;
+  border-radius:10px;
+  padding:10px;
+  background:#fff;
+  color:#111827;
+  font-weight:700;
+  cursor:pointer;
+}
+
 .pagamentos{
   display:grid;
   grid-template-columns:repeat(2,1fr);

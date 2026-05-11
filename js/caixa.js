@@ -31,6 +31,7 @@ const cancelarFiadoBtn = document.getElementById("cancelarFiado");
 let listaProdutos = [];
 let carrinho = [];
 let total = 0;
+let descontoAtual = 0;
 let categoriaSelecionada = "todas";
 let categoriasSistema = [];
 
@@ -302,10 +303,12 @@ function alterarQuantidade(id, delta) {
 function renderCarrinho() {
   if (!carrinhoDiv) return;
 
-  total = carrinho.reduce(
+  const subtotal = carrinho.reduce(
     (acc, item) => acc + item.preco * item.quantidade,
     0
   );
+  descontoAtual = Math.min(descontoAtual, subtotal);
+  total = Math.max(0, subtotal - descontoAtual);
 
   carrinhoDiv.innerHTML = "";
 
@@ -341,14 +344,36 @@ function renderCarrinho() {
   totalSpan.textContent = formatarMoeda(total);
 }
 
+window.aplicarDescontoCarrinho = async () => {
+  const subtotal = carrinho.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
+  if (!subtotal) return showAlert("Carrinho vazio.");
+
+  const valorTxt = await showPrompt({
+    titulo: "Aplicar desconto",
+    mensagem: `Subtotal atual: ${formatarMoeda(subtotal)}\nInforme o desconto em R$:`,
+    valorPadrao: String(descontoAtual || 0).replace(".", ","),
+    placeholder: "0,00"
+  });
+
+  if (valorTxt === null) return;
+  const desconto = Number(String(valorTxt).replace(",", "."));
+  if (Number.isNaN(desconto) || desconto < 0) {
+    showAlert("Informe um desconto válido.");
+    return;
+  }
+
+  descontoAtual = Math.min(desconto, subtotal);
+  renderCarrinho();
+};
+
 window.imprimirReciboPedido = () => {
   if (!carrinho.length) {
     showAlert("Adicione itens no carrinho para emitir o recibo.");
     return;
   }
 
-  const desconto = 0;
-  const subtotal = total;
+  const subtotal = carrinho.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
+  const desconto = descontoAtual;
   const totalFinal = Math.max(0, subtotal - desconto);
   const dataHora = new Date().toLocaleString("pt-BR");
   const logoUrl = new URL("../img/Logo.png", window.location.href).href;
@@ -511,6 +536,10 @@ async function finalizarVendaCompleta(pagamentos, troco = 0) {
     return;
   }
 
+  const subtotal = carrinho.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
+  const desconto = Math.min(descontoAtual, subtotal);
+  const totalFinal = Math.max(0, subtotal - desconto);
+
   const itens = carrinho.map((p) => ({
     idProduto: p.id,
     nome: p.nome,
@@ -527,8 +556,9 @@ async function finalizarVendaCompleta(pagamentos, troco = 0) {
     nomeUsuario: usuario.nome,
     cliente: nomeClienteInput?.value?.trim() || "Balcão",
     itens,
-    subtotal: total,
-    total,
+    subtotal,
+    desconto,
+    total: totalFinal,
     tipo: "balcao",
     status: "finalizado"
   });
@@ -537,7 +567,7 @@ async function finalizarVendaCompleta(pagamentos, troco = 0) {
   const caixaSnap = await getDoc(caixaRef);
   const saldoAtual = Number(caixaSnap.data()?.saldoAtual || 0);
 
-  await updateDoc(caixaRef, { saldoAtual: saldoAtual + total });
+  await updateDoc(caixaRef, { saldoAtual: saldoAtual + totalFinal });
 
   for (const item of carrinho) {
     const pRef = doc(db, "produtos", item.id);
@@ -554,6 +584,7 @@ async function finalizarVendaCompleta(pagamentos, troco = 0) {
 
   showAlert("Venda finalizada com sucesso.");
   carrinho = [];
+  descontoAtual = 0;
 
   if (nomeClienteInput) nomeClienteInput.value = "";
 
@@ -576,6 +607,10 @@ window.abrirModalFiado = () => {
 };
 
 async function registrarFiado() {
+  const subtotal = carrinho.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
+  const desconto = Math.min(descontoAtual, subtotal);
+  const totalFinal = Math.max(0, subtotal - desconto);
+
   const cliente = fiadoClienteInput.value.trim();
   const whatsapp = fiadoWhatsappInput.value.trim();
   if (!cliente) {
@@ -598,7 +633,7 @@ async function registrarFiado() {
 
   const vendaRef = await addDoc(collection(db, "vendas"), {
     criadoEm: new Date(),
-    pagamentos: [{ tipo: "fiado", valor: total }],
+    pagamentos: [{ tipo: "fiado", valor: totalFinal }],
     troco: 0,
     idCaixa: caixaId,
     idUsuario: usuario.nome,
@@ -607,8 +642,36 @@ async function registrarFiado() {
     whatsapp,
     observacao,
     itens,
-    subtotal: total,
-    total,
+    subtotal,
+    desconto,
+    total: totalFinal,
+    tipo: "balcao",
+    status: "fiado",
+    fiadoStatus: "aberto"
+  });
+
+  await registrarOuAtualizarCadastroFiado({
+    cliente,
+    whatsapp,
+    observacao,
+    valor: totalFinal,
+    origem: "balcao",
+    itens,
+    vendaId: vendaRef.id
+  });
+    criadoEm: new Date(),
+    pagamentos: [{ tipo: "fiado", valor: totalFinal }],
+    troco: 0,
+    idCaixa: caixaId,
+    idUsuario: usuario.nome,
+    nomeUsuario: usuario.nome,
+    cliente,
+    whatsapp,
+    observacao,
+    itens,
+    subtotal,
+    desconto,
+    total: totalFinal,
     tipo: "balcao",
     status: "fiado",
     fiadoStatus: "aberto"
@@ -634,6 +697,7 @@ async function registrarFiado() {
   }
 
   carrinho = [];
+  descontoAtual = 0;
   if (nomeClienteInput) nomeClienteInput.value = "";
   fecharModal(modalFiado);
   await carregarProdutos();
