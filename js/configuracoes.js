@@ -242,11 +242,15 @@ adicionarCategoria?.addEventListener("click", async () => {
 });
 
 async function inicializarPagina() {
-  await sincronizarUsuarioLogado();
-  atualizarVisibilidadeAdmin();
-  carregarMeuPerfil();
-  carregarUsuariosAdmin();
-  carregarCategorias();
+  try {
+    await sincronizarUsuarioLogado();
+    atualizarVisibilidadeAdmin();
+    carregarMeuPerfil();
+    await Promise.all([carregarUsuariosAdmin(), carregarCategorias()]);
+  } catch (erro) {
+    console.error("Erro ao inicializar configurações:", erro);
+    showAlert("Não foi possível carregar a tela de configurações agora.");
+  }
 }
 
 inicializarPagina();
