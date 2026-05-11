@@ -192,13 +192,18 @@ async function carregarProdutos() {
 }
 
 async function carregarCategoriasSistema() {
-  const snapshot = await getDocs(collection(db, "categoriasProduto"));
-  categoriasSistema = ["todas"];
-  snapshot.forEach((docSnap) => {
-    const nome = String(docSnap.data()?.nome || "").trim().toLowerCase();
-    if (nome) categoriasSistema.push(nome);
-  });
-  categoriasSistema = [...new Set(categoriasSistema)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  try {
+    const snapshot = await getDocs(collection(db, "categoriasProduto"));
+    categoriasSistema = ["todas"];
+    snapshot.forEach((docSnap) => {
+      const nome = String(docSnap.data()?.nome || "").trim().toLowerCase();
+      if (nome) categoriasSistema.push(nome);
+    });
+    categoriasSistema = [...new Set(categoriasSistema)].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  } catch (erro) {
+    console.warn("Não foi possível carregar categoriasProduto. Usando categorias dos produtos.", erro);
+    categoriasSistema = [];
+  }
 }
 
 function getProdutosFiltrados() {
