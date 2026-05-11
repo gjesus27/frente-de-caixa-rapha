@@ -3,6 +3,7 @@ import {
   collection,
   getDocs,
   doc,
+  onSnapshot,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -216,3 +217,6 @@ btnFecharCancelar.addEventListener("click", () => modalCancelar.classList.add("h
 btnConfirmarCancelamento.addEventListener("click", confirmarCancelamento);
 
 carregarVendas();
+onSnapshot(collection(db, "vendas"), () => {
+  carregarVendas();
+});

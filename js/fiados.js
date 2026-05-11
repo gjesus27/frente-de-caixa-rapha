@@ -6,6 +6,7 @@ import {
   collection,
   doc,
   getDocs,
+  onSnapshot,
   query,
   updateDoc,
   where
@@ -186,3 +187,6 @@ async function carregarFiados() {
 buscaFiado?.addEventListener("input", renderizar);
 filtroStatusFiado?.addEventListener("change", renderizar);
 carregarFiados();
+onSnapshot(collection(db, "vendas"), () => {
+  carregarFiados();
+});
