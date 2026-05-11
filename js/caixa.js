@@ -163,21 +163,25 @@ async function carregarCaixaAberto() {
 }
 
 async function carregarProdutos() {
-  const snapshot = await getDocs(collection(db, "produtos"));
   listaProdutos = [];
+
+  let snapshot = await getDocs(collection(db, "produtos"));
+  if (snapshot.empty) {
+    snapshot = await getDocs(collection(db, "products"));
+  }
 
   snapshot.forEach((docSnap) => {
     const p = docSnap.data();
 
-    if (p.ativo === false) return;
+    if (p.ativo === false || p.active === false) return;
 
     listaProdutos.push({
       id: docSnap.id,
-      nome: p.nome || "Produto sem nome",
-      preco: Number(p.preco || 0),
-      imagem: p.imagem || "https://via.placeholder.com/120",
-      categoria: (p.categoria || "outros").toLowerCase(),
-      estoque: Number(p.estoque || 0)
+      nome: p.nome || p.name || "Produto sem nome",
+      preco: Number(p.preco ?? p.price ?? 0),
+      imagem: p.imagem || p.image || "https://via.placeholder.com/120",
+      categoria: String(p.categoria || p.category || "outros").toLowerCase(),
+      estoque: Number(p.estoque ?? p.quantity ?? 0)
     });
   });
 
@@ -1160,13 +1164,18 @@ cancelarFiadoBtn?.addEventListener("click", () => fecharModal(modalFiado));
 confirmarFiadoBtn?.addEventListener("click", registrarFiado);
 
 async function iniciar() {
-  await carregarCaixaAberto();
-  await carregarCategoriasSistema();
-  await carregarProdutos();
-  if (!mesasCarregadas) {
-    renderMesas();
+  try {
+    await carregarCaixaAberto();
+    await carregarCategoriasSistema();
+    await carregarProdutos();
+    if (!mesasCarregadas) {
+      renderMesas();
+    }
+    renderCarrinho();
+  } catch (erro) {
+    console.error("Erro ao inicializar PDV:", erro);
+    showAlert("Não foi possível carregar o PDV. Verifique sua conexão e as configurações do Firestore.");
   }
-  renderCarrinho();
 }
 
 iniciar();
