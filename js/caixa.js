@@ -165,9 +165,27 @@ async function carregarCaixaAberto() {
 async function carregarProdutos() {
   listaProdutos = [];
 
-  let snapshot = await getDocs(collection(db, "produtos"));
-  if (snapshot.empty) {
-    snapshot = await getDocs(collection(db, "products"));
+  const colecoes = ["produtos", "products"];
+  let snapshot = null;
+
+  for (const nomeColecao of colecoes) {
+    try {
+      const atual = await getDocs(collection(db, nomeColecao));
+      if (!snapshot || !snapshot.size) snapshot = atual;
+      if (!atual.empty) {
+        snapshot = atual;
+        break;
+      }
+    } catch (erro) {
+      console.warn(`Falha ao carregar coleção ${nomeColecao}.`, erro);
+    }
+  }
+
+  if (!snapshot) {
+    renderCategorias();
+    renderProdutos();
+    renderProdutosMesa();
+    return;
   }
 
   snapshot.forEach((docSnap) => {
@@ -190,6 +208,7 @@ async function carregarProdutos() {
   renderProdutos();
   renderProdutosMesa();
 }
+
 
 async function carregarCategoriasSistema() {
   try {
@@ -1171,16 +1190,26 @@ confirmarFiadoBtn?.addEventListener("click", registrarFiado);
 async function iniciar() {
   try {
     await carregarCaixaAberto();
-    await carregarCategoriasSistema();
-    await carregarProdutos();
-    if (!mesasCarregadas) {
-      renderMesas();
-    }
-    renderCarrinho();
   } catch (erro) {
-    console.error("Erro ao inicializar PDV:", erro);
-    showAlert("Não foi possível carregar o PDV. Verifique sua conexão e as configurações do Firestore.");
+    console.warn("Não foi possível validar o caixa aberto na inicialização.", erro);
+    caixaAberto = false;
+    caixaId = null;
   }
+
+  await carregarCategoriasSistema();
+  await carregarProdutos();
+
+  try {
+    if (!mesasCarregadas) {
+      await carregarMesas();
+    }
+  } catch (erro) {
+    console.warn("Não foi possível carregar mesas na inicialização.", erro);
+    renderMesas();
+  }
+
+  renderCarrinho();
 }
+
 
 iniciar();
