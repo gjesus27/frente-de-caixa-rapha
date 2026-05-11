@@ -41,6 +41,7 @@ let caixaAberto = false;
 let mesasAbertas = [];
 let mesaSelecionada = null;
 let mesasCarregadas = false;
+let descontoMesaAtual = 0;
 
 const formatarMoeda = (valor) => `R$ ${Number(valor || 0).toFixed(2)}`;
 
@@ -1015,6 +1016,23 @@ window.fecharMesaSelecionada = async () => {
     return;
   }
 
+  const descontoTxt = await showPrompt({
+    titulo: "Desconto da mesa",
+    mensagem: `Total atual: ${formatarMoeda(totalMesa)}\nInforme o desconto em R$ (0 para nenhum):`,
+    valorPadrao: String(descontoMesaAtual || 0).replace(".", ","),
+    placeholder: "0,00"
+  });
+
+  if (descontoTxt === null) return;
+
+  const descontoInformado = Number(String(descontoTxt).replace(",", "."));
+  if (Number.isNaN(descontoInformado) || descontoInformado < 0) {
+    showAlert("Informe um desconto válido.");
+    return;
+  }
+
+  descontoMesaAtual = Math.min(descontoInformado, totalMesa);
+
   const formas = ["dinheiro", "pix", "debito", "credito", "ticket", "cashback", "fiado"];
   opcoesPagamentoMesa.innerHTML = "";
 
@@ -1031,7 +1049,9 @@ window.fecharMesaSelecionada = async () => {
 async function confirmarFechamentoMesa(forma) {
   if (!mesaSelecionada) return;
 
-  const totalMesa = Number(mesaSelecionada.total || 0);
+  const subtotalMesa = Number(mesaSelecionada.total || 0);
+  const descontoMesa = Math.min(Number(descontoMesaAtual || 0), subtotalMesa);
+  const totalMesa = Math.max(0, subtotalMesa - descontoMesa);
   const itens = (mesaSelecionada.itens || []).map((i) => ({
     idProduto: i.idProduto,
     nome: i.nome,
@@ -1087,7 +1107,8 @@ async function confirmarFechamentoMesa(forma) {
     whatsapp: dadosFiado?.whatsapp || "",
     observacaoFiado: dadosFiado?.observacao || "",
     itens,
-    subtotal: totalMesa,
+    subtotal: subtotalMesa,
+    desconto: descontoMesa,
     total: totalMesa,
     tipo: "mesa",
     mesaNumero: mesaSelecionada.numeroMesa,
@@ -1122,6 +1143,7 @@ async function confirmarFechamentoMesa(forma) {
   fecharModal(modalPagamentoMesa);
   showAlert(`Mesa ${mesaSelecionada.numeroMesa} fechada com sucesso.`);
   mesaSelecionada = null;
+  descontoMesaAtual = 0;
   await carregarMesas();
 }
 
