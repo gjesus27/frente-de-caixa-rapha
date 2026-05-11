@@ -7,6 +7,7 @@ import {
   doc,
   getDocs,
   onSnapshot,
+  getDoc,
   query,
   updateDoc,
   where
@@ -42,7 +43,7 @@ function renderizar() {
   const filtroStatus = normalizar(filtroStatusFiado?.value || "aberto");
   const lista = fiados.filter((item) => {
     const alvo = `${item.cliente || ""} ${item.whatsapp || ""}`;
-    const status = normalizar(item.fiadoStatus || "aberto");
+    const status = normalizar(item.status || "pendente");
     const filtraStatus = filtroStatus === "todos" ? true : status === filtroStatus;
     return normalizar(alvo).includes(termo) && filtraStatus;
   });
@@ -56,11 +57,11 @@ function renderizar() {
     <article class="fiadoCard">
       <p><strong>Cliente:</strong> ${item.cliente || "-"}</p>
       <p><strong>WhatsApp:</strong> ${item.whatsapp || "-"}</p>
-      <p><strong>Total:</strong> ${money(item.total)}</p>
-      <p><strong>Status:</strong> <span class="fiadoStatus ${normalizar(item.fiadoStatus) === "pago" ? "pago" : ""}">${item.fiadoStatus || "aberto"}</span></p>
-      ${normalizar(item.fiadoStatus) !== "pago"
+      <p><strong>Total em aberto:</strong> ${money(item.saldoPendente)}</p>
+      <p><strong>Status:</strong> <span class="fiadoStatus ${normalizar(item.status) === "quitado" ? "pago" : ""}">${item.status || "pendente"}</span></p>
+      ${normalizar(item.status) !== "quitado"
         ? `<button class="btnPrimario" data-receber="${item.id}">Registrar cobrança</button>`
-        : "<p><strong>Forma recebida:</strong> " + (item.fiadoFormaRecebimento || "-") + "</p>"
+        : "<p><strong>Forma recebida:</strong> " + (item.ultimaFormaRecebimento || "-") + "</p>"
       }
     </article>
   `).join("");
@@ -73,8 +74,8 @@ function renderizar() {
 
       const valorTxt = await showPrompt({
         titulo: "Registrar recebimento",
-        mensagem: `Total pendente: ${money(alvo.total)}\nInforme o valor recebido`,
-        valorPadrao: String(alvo.total || 0),
+        mensagem: `Total pendente: ${money(alvo.saldoPendente)}\nInforme o valor recebido`,
+        valorPadrao: String(alvo.saldoPendente || 0),
         placeholder: "0,00"
       });
       if (!valorTxt) return;
@@ -108,13 +109,41 @@ function renderizar() {
       const ok = await showConfirm("Confirmar baixa desta cobrança?");
       if (!ok) return;
 
-      await updateDoc(doc(db, "vendas", alvo.id), {
-        fiadoStatus: "pago",
-        fiadoPagoEm: new Date(),
-        fiadoPagoPor: usuario?.nome || "sistema",
-        fiadoValorRecebido: valor,
-        fiadoFormaRecebimento: forma
+      const saldoAtual = Number(alvo.saldoPendente || 0);
+      if (valor > saldoAtual) {
+        showAlert("Valor maior que o saldo pendente.");
+        return;
+      }
+
+      const novoSaldo = saldoAtual - valor;
+      const quitado = novoSaldo <= 0;
+
+      await updateDoc(doc(db, "fiados", alvo.id), {
+        saldoPendente: novoSaldo,
+        status: quitado ? "quitado" : "pendente",
+        ultimaFormaRecebimento: forma,
+        ultimaCobrancaEm: new Date(),
+        ultimaCobrancaPor: usuario?.nome || "sistema"
       });
+
+      const vendasFiadoIds = Array.isArray(alvo.vendasFiadoIds)
+        ? alvo.vendasFiadoIds
+        : (alvo.vendaId ? [alvo.vendaId] : []);
+
+      for (const vendaId of vendasFiadoIds) {
+        const vendaRef = doc(db, "vendas", vendaId);
+        const vendaSnap = await getDoc(vendaRef);
+        if (!vendaSnap.exists()) continue;
+        const venda = vendaSnap.data() || {};
+        const totalVenda = Number(venda.total || 0);
+        const statusVenda = quitado ? "pago" : "aberto";
+        await updateDoc(vendaRef, {
+          fiadoStatus: statusVenda,
+          fiadoPagoEm: quitado ? new Date() : null,
+          fiadoPagoPor: quitado ? (usuario?.nome || "sistema") : null,
+          fiadoFormaRecebimento: forma
+        });
+      }
 
       await addDoc(collection(db, "vendas"), {
         criadoEm: new Date(),
@@ -128,7 +157,7 @@ function renderizar() {
         subtotal: valor,
         tipo: "recebimento_fiado",
         status: "finalizado",
-        referenciaVendaFiadoId: alvo.id
+        referenciaFiadoCadastroId: alvo.id
       });
 
       await updateDoc(doc(db, "caixa", caixaDoDia.id), {
@@ -165,14 +194,16 @@ async function obterCaixaAbertoDoUsuario() {
 }
 
 async function carregarFiados() {
-  const snap = await getDocs(collection(db, "vendas"));
+  const snap = await getDocs(collection(db, "fiados"));
   fiados = [];
 
   snap.forEach((docSnap) => {
-    const venda = { id: docSnap.id, ...docSnap.data() };
-    const ehFiado = String(venda.pagamentos?.[0]?.tipo || venda.formaPagamento || "").toLowerCase() === "fiado";
-    const status = String(venda.fiadoStatus || "aberto").toLowerCase();
-    if (ehFiado) fiados.push({ ...venda, fiadoStatus: status });
+    const fiado = { id: docSnap.id, ...docSnap.data() };
+    fiados.push({
+      ...fiado,
+      status: String(fiado.status || "pendente").toLowerCase(),
+      saldoPendente: Number(fiado.saldoPendente ?? fiado.total ?? 0)
+    });
   });
 
   fiados.sort((a, b) => {

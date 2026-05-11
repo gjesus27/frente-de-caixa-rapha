@@ -73,6 +73,72 @@ function fecharModal(idModal) {
   idModal.setAttribute("aria-hidden", "true");
 }
 
+function normalizarContatoWhatsapp(valor) {
+  return String(valor || "").replace(/\D/g, "");
+}
+
+async function registrarOuAtualizarCadastroFiado({
+  cliente,
+  whatsapp,
+  observacao,
+  valor,
+  origem,
+  itens,
+  vendaId,
+  mesaNumero = null
+}) {
+  const contatoNormalizado = normalizarContatoWhatsapp(whatsapp);
+  const fiadosRef = collection(db, "fiados");
+  const q = query(fiadosRef, where("whatsappNormalizado", "==", contatoNormalizado));
+  const snap = await getDocs(q);
+
+  let cadastroExistente = null;
+  snap.forEach((d) => {
+    const atual = { id: d.id, ...d.data() };
+    if (!cadastroExistente || Number(atual.saldoPendente || 0) > 0) cadastroExistente = atual;
+  });
+
+  if (cadastroExistente) {
+    const novoSaldo = Number(cadastroExistente.saldoPendente || 0) + Number(valor || 0);
+    const novasVendas = Array.isArray(cadastroExistente.vendasFiadoIds) ? cadastroExistente.vendasFiadoIds : [];
+    if (vendaId) novasVendas.push(vendaId);
+
+    await updateDoc(doc(db, "fiados", cadastroExistente.id), {
+      cliente: cliente || cadastroExistente.cliente || "Cliente",
+      whatsapp,
+      whatsappNormalizado: contatoNormalizado,
+      saldoPendente: novoSaldo,
+      totalAcumulado: Number(cadastroExistente.totalAcumulado || cadastroExistente.total || 0) + Number(valor || 0),
+      status: "pendente",
+      ultimaAtualizacao: new Date(),
+      ultimaObservacao: observacao || "",
+      vendasFiadoIds: [...new Set(novasVendas)],
+      mesaNumero: mesaNumero ?? cadastroExistente.mesaNumero ?? null
+    });
+    return cadastroExistente.id;
+  }
+
+  const novo = await addDoc(fiadosRef, {
+    cliente,
+    whatsapp,
+    whatsappNormalizado: contatoNormalizado,
+    observacao,
+    total: valor,
+    totalAcumulado: valor,
+    saldoPendente: valor,
+    origem,
+    itens,
+    status: "pendente",
+    criadoEm: new Date(),
+    criadoPor: usuario.nome,
+    vendaId: vendaId || null,
+    vendasFiadoIds: vendaId ? [vendaId] : [],
+    mesaNumero
+  });
+
+  return novo.id;
+}
+
 async function carregarCaixaAberto() {
   const q = query(
     collection(db, "caixa"),
@@ -565,20 +631,7 @@ async function registrarFiado() {
     quantidade: Number(p.quantidade)
   }));
 
-  await addDoc(collection(db, "fiados"), {
-    cliente,
-    whatsapp,
-    observacao,
-    total: totalFinal,
-    saldoPendente: totalFinal,
-    origem: "balcao",
-    itens,
-    status: "aberto",
-    criadoEm: new Date(),
-    criadoPor: usuario.nome
-  });
-
-  await addDoc(collection(db, "vendas"), {
+  const vendaRef = await addDoc(collection(db, "vendas"), {
     criadoEm: new Date(),
     pagamentos: [{ tipo: "fiado", valor: totalFinal }],
     troco: 0,
@@ -593,7 +646,45 @@ async function registrarFiado() {
     desconto,
     total: totalFinal,
     tipo: "balcao",
-    status: "fiado"
+    status: "fiado",
+    fiadoStatus: "aberto"
+  });
+
+  await registrarOuAtualizarCadastroFiado({
+    cliente,
+    whatsapp,
+    observacao,
+    valor: totalFinal,
+    origem: "balcao",
+    itens,
+    vendaId: vendaRef.id
+  });
+    criadoEm: new Date(),
+    pagamentos: [{ tipo: "fiado", valor: totalFinal }],
+    troco: 0,
+    idCaixa: caixaId,
+    idUsuario: usuario.nome,
+    nomeUsuario: usuario.nome,
+    cliente,
+    whatsapp,
+    observacao,
+    itens,
+    subtotal,
+    desconto,
+    total: totalFinal,
+    tipo: "balcao",
+    status: "fiado",
+    fiadoStatus: "aberto"
+  });
+
+  await registrarOuAtualizarCadastroFiado({
+    cliente,
+    whatsapp,
+    observacao,
+    valor: total,
+    origem: "balcao",
+    itens,
+    vendaId: vendaRef.id
   });
 
   for (const item of carrinho) {
@@ -638,9 +729,11 @@ window.pagarSimples = async (tipo) => {
       return;
     }
 
+    const troco = recebido - total;
+    showAlert(`Troco: ${formatarMoeda(troco)}`);
     await finalizarVendaCompleta(
       [{ tipo: "dinheiro", valor: total }],
-      recebido - total
+      troco
     );
     return;
   }
@@ -1003,17 +1096,15 @@ async function confirmarFechamentoMesa(forma) {
   });
 
   if (forma === "fiado" && dadosFiado) {
-    await addDoc(collection(db, "fiados"), {
+    await registrarOuAtualizarCadastroFiado({
       cliente: dadosFiado.cliente,
       whatsapp: dadosFiado.whatsapp,
       observacao: dadosFiado.observacao || "",
-      total: totalMesa,
-      saldoPendente: totalMesa,
-      data: new Date(),
-      status: "pendente",
+      valor: totalMesa,
       origem: "mesa",
-      mesaNumero: mesaSelecionada.numeroMesa,
-      vendaId: vendaRef.id
+      itens,
+      vendaId: vendaRef.id,
+      mesaNumero: mesaSelecionada.numeroMesa
     });
   } else {
     const caixaRef = doc(db, "caixa", caixaId);
