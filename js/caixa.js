@@ -688,33 +688,6 @@ async function registrarFiado() {
     itens,
     vendaId: vendaRef.id
   });
-    criadoEm: new Date(),
-    pagamentos: [{ tipo: "fiado", valor: totalFinal }],
-    troco: 0,
-    idCaixa: caixaId,
-    idUsuario: usuario.nome,
-    nomeUsuario: usuario.nome,
-    cliente,
-    whatsapp,
-    observacao,
-    itens,
-    subtotal,
-    desconto,
-    total: totalFinal,
-    tipo: "balcao",
-    status: "fiado",
-    fiadoStatus: "aberto"
-  });
-
-  await registrarOuAtualizarCadastroFiado({
-    cliente,
-    whatsapp,
-    observacao,
-    valor: total,
-    origem: "balcao",
-    itens,
-    vendaId: vendaRef.id
-  });
 
   for (const item of carrinho) {
     const pRef = doc(db, "produtos", item.id);
